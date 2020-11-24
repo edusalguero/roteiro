@@ -8,10 +8,9 @@ import (
 )
 
 type Problem struct {
-	DepotLocation point.Point
-	Fleet         []Asset
-	Requests      []RiderRequest
-	Constraints   Constraints
+	Fleet       []Asset
+	Requests    []RiderRequest
+	Constraints Constraints
 }
 
 func (p Problem) GetMaxJourneyTimeFactor() float64 {
@@ -20,12 +19,12 @@ func (p Problem) GetMaxJourneyTimeFactor() float64 {
 
 type Asset struct {
 	AssetID  AssetID
-	Location *point.Point
+	Location point.Point
 	Capacity Capacity
 }
 
 type AssetID string
-type Capacity int8
+type Capacity int
 
 type Constraints struct {
 	MaxJourneyTimeFactor float64 // Max multiplier on the direct route. Used to calculate the dropoff time offset

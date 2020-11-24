@@ -20,8 +20,6 @@ import (
 	"github.com/edusalguero/roteiro.git/internal/routeestimator"
 )
 
-const assetsCapacity = 4
-
 type SequentialConstruction struct {
 	logger            logger.Logger
 	routeEstimator    routeestimator.Estimator
@@ -39,7 +37,9 @@ func (a *SequentialConstruction) Solve(ctx context.Context, p Problem) (*Solutio
 	usedAssets := 0
 	insertedRequests := 0
 
-	requests := a.sortRequestFromDepotToDropOffFarthestFirst(ctx, p.DepotLocation, p.Requests)
+	asset := p.Fleet[0]
+	assetLocation := asset.Location
+	requests := a.sortRequestFromDepotToDropOffFarthestFirst(ctx, assetLocation, p.Requests)
 
 	var unassignedRequests Requests
 	for i := range requests {
@@ -58,7 +58,7 @@ func (a *SequentialConstruction) Solve(ctx context.Context, p Problem) (*Solutio
 		r = append(r, &Stop{
 			Name:        "Asset",
 			RiderID:     nil,
-			Point:       p.DepotLocation,
+			Point:       assetLocation,
 			ServiceTime: 0,
 		})
 
@@ -69,14 +69,14 @@ func (a *SequentialConstruction) Solve(ctx context.Context, p Problem) (*Solutio
 			}
 			req := *ur
 			a.logger.Debugf("###  Adding request a new route: %s", req.RiderID)
-			r = a.addRequestStops(ctx, r, p.DepotLocation, req, p.GetMaxJourneyTimeFactor())
+			r = a.addRequestStops(ctx, r, assetLocation, req, p.GetMaxJourneyTimeFactor())
 
-			r, err = a.hillClimbingRoutingAlgorithmV2(ctx, r)
+			r, err = a.hillClimbingRoutingAlgorithmV2(ctx, r, asset)
 			if err != nil {
 				return nil, err
 			}
 
-			if a.isFeasibleRoute(ctx, assetsCapacity, r) {
+			if a.isFeasibleRoute(ctx, r, asset) {
 				// Remove from unassignedRequests
 				unassignedRequests[i] = nil
 				insertedRequests++
@@ -142,7 +142,7 @@ func (a *SequentialConstruction) addRequestStops(ctx context.Context, r Route, a
 
 // Based on algorithm 1: The HC routing algorithm.
 // https://www.sciencedirect.com/science/article/pii/S131915781100036X#n0035
-func (a *SequentialConstruction) hillClimbingRoutingAlgorithmV2(ctx context.Context, r Route) (Route, error) {
+func (a *SequentialConstruction) hillClimbingRoutingAlgorithmV2(ctx context.Context, r Route, asset Asset) (Route, error) {
 	l := len(r)
 	cursor := l - 1
 
@@ -167,12 +167,12 @@ func (a *SequentialConstruction) hillClimbingRoutingAlgorithmV2(ctx context.Cont
 			a.logger.Debugf("Comparing ServiceTimes [%s] vs [%s]: (%v, %v)%v", current.Name, neighbor.Name, current.GetServiceTime(), neighbor.GetServiceTime(), current.GetServiceTime() < neighbor.GetServiceTime())
 			if current.GetServiceTime() > neighbor.GetServiceTime() {
 				rPrima := r
-				costR, err := a.cost(ctx, r)
+				costR, err := a.cost(ctx, r, asset)
 				if err != nil {
 					return nil, err
 				}
 				rPrima.Swap(cursor, compareCursor)
-				costRPrima, err := a.cost(ctx, rPrima)
+				costRPrima, err := a.cost(ctx, rPrima, asset)
 				if err != nil {
 					return nil, err
 				}
@@ -201,7 +201,7 @@ func (a *SequentialConstruction) hillClimbingRoutingAlgorithmV2(ctx context.Cont
 // The largest penalty should be imposed on the time window violations, in order to direct the search towards more feasible routes.
 // We used the following weights for the route cost function:w1= 0.201,w2= 0.7 and w3= 0.0992.
 
-func (a *SequentialConstruction) cost(ctx context.Context, r Route) (float64, error) {
+func (a *SequentialConstruction) cost(ctx context.Context, r Route, asset Asset) (float64, error) {
 	const (
 		W1 float64 = 0.201
 		W2 float64 = 0.7
@@ -215,7 +215,7 @@ func (a *SequentialConstruction) cost(ctx context.Context, r Route) (float64, er
 	}
 
 	twv := countTimeWindowViolations(r, estimation)
-	cv := countCapacityViolations(assetsCapacity, r)
+	cv := countCapacityViolations(int(asset.Capacity), r)
 	return W1*estimation.TotalDuration.Minutes() + W2*float64(twv) + W3*float64(cv), nil
 }
 
@@ -245,7 +245,7 @@ func removeFromRoute(r Route, req RiderRequest) Route {
 	return route
 }
 
-func (a *SequentialConstruction) isFeasibleRoute(ctx context.Context, capacity int, r Route) bool {
+func (a *SequentialConstruction) isFeasibleRoute(ctx context.Context, r Route, asset Asset) bool {
 	// time window constraint violations
 	points := r.GetPoints()
 	for i := range points {
@@ -266,8 +266,8 @@ func (a *SequentialConstruction) isFeasibleRoute(ctx context.Context, capacity i
 
 	//  capacity constraint violations
 	occupied := countAssignedRequests(r)
-	feasible := occupied <= capacity
-	a.logger.Debugf("Is Feasible %b [%d/%d]", feasible, occupied, capacity)
+	feasible := occupied <= int(asset.Capacity)
+	a.logger.Debugf("Is Feasible %b [%d/%d]", feasible, occupied, asset.Capacity)
 	return feasible
 }
 

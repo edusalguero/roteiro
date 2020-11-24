@@ -45,17 +45,11 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 		{
 			"Same pickup same dropoff",
 			Problem{
-				DepotLocation: minoLoc,
 				Fleet: []Asset{
 					{
-						AssetID:  "Pontedeume Asset",
-						Location: &pontedeumeLoc,
-						Capacity: 1,
-					},
-					{
 						AssetID:  "Miño Asset",
-						Location: &minoLoc,
-						Capacity: 1,
+						Location: minoLoc,
+						Capacity: 4,
 					},
 				},
 				Requests: []RiderRequest{
@@ -100,17 +94,11 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 		{
 			"Simple routing",
 			Problem{
-				DepotLocation: pontedeumeLoc,
 				Fleet: []Asset{
 					{
 						AssetID:  "Pontedeume Asset",
-						Location: &pontedeumeLoc,
-						Capacity: 1,
-					},
-					{
-						AssetID:  "Miño Asset",
-						Location: &minoLoc,
-						Capacity: 1,
+						Location: pontedeumeLoc,
+						Capacity: 4,
 					},
 				},
 				Requests: []RiderRequest{
@@ -168,17 +156,11 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 		{
 			"Routific example",
 			Problem{
-				DepotLocation: point.NewPoint(49.2553636, -123.0873365),
 				Fleet: []Asset{
 					{
-						AssetID:  "Pontedeume Asset",
-						Location: &pontedeumeLoc,
-						Capacity: 1,
-					},
-					{
-						AssetID:  "Miño Asset",
-						Location: &minoLoc,
-						Capacity: 1,
+						AssetID:  "Asset",
+						Location: point.NewPoint(49.2553636, -123.0873365),
+						Capacity: 4,
 					},
 				},
 				Requests: []RiderRequest{
@@ -217,9 +199,14 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 		{
 			"One to many",
 			Problem{
-				DepotLocation: oneOrigin,
-				Fleet:         []Asset{},
-				Requests:      manyRequests(t, oneOrigin),
+				Fleet: []Asset{
+					{
+						AssetID:  "Asset",
+						Location: oneOrigin,
+						Capacity: 4,
+					},
+				},
+				Requests: manyRequests(t, oneOrigin),
 				Constraints: Constraints{
 					MaxJourneyTimeFactor: 1.5,
 				},
