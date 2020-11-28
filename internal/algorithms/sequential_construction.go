@@ -58,7 +58,7 @@ func (a *SequentialConstruction) Solve(ctx context.Context, p Problem) (*Solutio
 
 		r = append(r, &Stop{
 			Name:        "Asset",
-			RiderID:     nil,
+			RequestID:   nil,
 			Point:       assetLocation,
 			ServiceTime: 0,
 		})
@@ -69,7 +69,7 @@ func (a *SequentialConstruction) Solve(ctx context.Context, p Problem) (*Solutio
 				continue
 			}
 			req := *ur
-			a.logger.Debugf("###  Adding request a new route: %s", req.RiderID)
+			a.logger.Debugf("###  Adding request a new route: %s", req.RequestID)
 			r = a.addRequestStops(ctx, r, assetLocation, req, p.GetMaxJourneyTimeFactor())
 			r, err = a.hillClimbingRoutingAlgorithmV2(ctx, r, asset)
 			if err != nil {
@@ -112,11 +112,11 @@ func (a *SequentialConstruction) Solve(ctx context.Context, p Problem) (*Solutio
 	algoDuration := time.Since(algoStart)
 	s := Solution{
 		Metrics: SolutionMetrics{
-			NumAssets:  uint16(usedAssets),
-			NumRiders:  uint16(insertedRequests),
-			Duration:   duration,
-			Distance:   distance,
-			SolvedTime: algoDuration,
+			NumAssets:   uint16(usedAssets),
+			NumRequests: uint16(insertedRequests),
+			Duration:    duration,
+			Distance:    distance,
+			SolvedTime:  algoDuration,
 		},
 		Routes:     solutionRoutes,
 		Unassigned: unassigned,
@@ -136,9 +136,9 @@ func getNotAssignedRequest(requests Requests) []Request {
 
 		// Do no copy calculated service times
 		unassigned = append(unassigned, Request{
-			RiderID: ur.RiderID,
-			PickUp:  ur.PickUp,
-			DropOff: ur.DropOff,
+			RequestID: ur.RequestID,
+			PickUp:    ur.PickUp,
+			DropOff:   ur.DropOff,
 		})
 	}
 
@@ -156,15 +156,15 @@ func assetsWithMoreCapacityFirst(assets []Asset) []Asset {
 func (a *SequentialConstruction) addRequestStops(ctx context.Context, r Route, assetLocation point.Point, req *Request, timeFactor float64) Route {
 	a.updateRequestServiceTime(ctx, assetLocation, req, timeFactor)
 	r = append(r, &Stop{
-		Name:        fmt.Sprintf("%s PickUp", req.RiderID),
-		RiderID:     &req.RiderID,
+		Name:        fmt.Sprintf("%s PickUp", req.RequestID),
+		RequestID:   &req.RequestID,
 		Point:       req.PickUp,
 		ServiceTime: req.PickUpServiceTime,
 	})
 
 	r = append(r, &Stop{
-		Name:        fmt.Sprintf("%s DropOff", req.RiderID),
-		RiderID:     &req.RiderID,
+		Name:        fmt.Sprintf("%s DropOff", req.RequestID),
+		RequestID:   &req.RequestID,
 		Point:       req.DropOff,
 		ServiceTime: req.DropOffServiceTime,
 	})
@@ -270,7 +270,7 @@ func removeFromRoute(r Route, req Request) Route {
 	var route Route
 	route = append(route, r[0])
 	for _, stop := range r[1:] {
-		skip := *stop.RiderID == req.RiderID
+		skip := *stop.RequestID == req.RequestID
 		if !skip {
 			route = append(route, stop)
 		}

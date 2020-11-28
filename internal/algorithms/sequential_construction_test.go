@@ -55,24 +55,24 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 				},
 				Requests: []Request{
 					{
-						RiderID: "As Pontes 1",
-						PickUp:  aspontesLoc,
-						DropOff: sadaLoc,
+						RequestID: "As Pontes 1",
+						PickUp:    aspontesLoc,
+						DropOff:   sadaLoc,
 					},
 					{
-						RiderID: "As Pontes 2",
-						PickUp:  aspontesLoc,
-						DropOff: sadaLoc,
+						RequestID: "As Pontes 2",
+						PickUp:    aspontesLoc,
+						DropOff:   sadaLoc,
 					},
 					{
-						RiderID: "As Pontes 3",
-						PickUp:  aspontesLoc,
-						DropOff: sadaLoc,
+						RequestID: "As Pontes 3",
+						PickUp:    aspontesLoc,
+						DropOff:   sadaLoc,
 					},
 					{
-						RiderID: "As Pontes 4",
-						PickUp:  aspontesLoc,
-						DropOff: sadaLoc,
+						RequestID: "As Pontes 4",
+						PickUp:    aspontesLoc,
+						DropOff:   sadaLoc,
 					},
 				},
 
@@ -110,24 +110,24 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 				},
 				Requests: []Request{
 					{
-						RiderID: "As Pontes 1",
-						PickUp:  aspontesLoc,
-						DropOff: sadaLoc,
+						RequestID: "As Pontes 1",
+						PickUp:    aspontesLoc,
+						DropOff:   sadaLoc,
 					},
 					{
-						RiderID: "As Pontes 2",
-						PickUp:  aspontesLoc,
-						DropOff: sadaLoc,
+						RequestID: "As Pontes 2",
+						PickUp:    aspontesLoc,
+						DropOff:   sadaLoc,
 					},
 					{
-						RiderID: "As Pontes 3",
-						PickUp:  aspontesLoc,
-						DropOff: sadaLoc,
+						RequestID: "As Pontes 3",
+						PickUp:    aspontesLoc,
+						DropOff:   sadaLoc,
 					},
 					{
-						RiderID: "As Pontes 4",
-						PickUp:  aspontesLoc,
-						DropOff: sadaLoc,
+						RequestID: "As Pontes 4",
+						PickUp:    aspontesLoc,
+						DropOff:   sadaLoc,
 					},
 				},
 
@@ -172,24 +172,24 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 				},
 				Requests: []Request{
 					{
-						RiderID: "As Pontes 1",
-						PickUp:  aspontesLoc,
-						DropOff: sadaLoc,
+						RequestID: "As Pontes 1",
+						PickUp:    aspontesLoc,
+						DropOff:   sadaLoc,
 					},
 					{
-						RiderID: "As Pontes 2",
-						PickUp:  aspontesLoc,
-						DropOff: sadaLoc,
+						RequestID: "As Pontes 2",
+						PickUp:    aspontesLoc,
+						DropOff:   sadaLoc,
 					},
 					{
-						RiderID: "As Pontes 3",
-						PickUp:  aspontesLoc,
-						DropOff: sadaLoc,
+						RequestID: "As Pontes 3",
+						PickUp:    aspontesLoc,
+						DropOff:   sadaLoc,
 					},
 					{
-						RiderID: "As Pontes 4",
-						PickUp:  aspontesLoc,
-						DropOff: sadaLoc,
+						RequestID: "As Pontes 4",
+						PickUp:    aspontesLoc,
+						DropOff:   sadaLoc,
 					},
 				},
 
@@ -214,9 +214,9 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 				},
 			},
 			[]Request{{
-				RiderID: "As Pontes 4",
-				PickUp:  aspontesLoc,
-				DropOff: sadaLoc,
+				RequestID: "As Pontes 4",
+				PickUp:    aspontesLoc,
+				DropOff:   sadaLoc,
 			}},
 			false,
 			false,
@@ -238,24 +238,24 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 				},
 				Requests: []Request{
 					{
-						RiderID: "As Pontes 1",
-						PickUp:  aspontesLoc,
-						DropOff: sadaLoc,
+						RequestID: "As Pontes 1",
+						PickUp:    aspontesLoc,
+						DropOff:   sadaLoc,
 					},
 					{
-						RiderID: "As Pontes 2",
-						PickUp:  aspontesLoc,
-						DropOff: sadaLoc,
+						RequestID: "As Pontes 2",
+						PickUp:    aspontesLoc,
+						DropOff:   sadaLoc,
 					},
 					{
-						RiderID: "As Pontes 3",
-						PickUp:  aspontesLoc,
-						DropOff: sadaLoc,
+						RequestID: "As Pontes 3",
+						PickUp:    aspontesLoc,
+						DropOff:   sadaLoc,
 					},
 					{
-						RiderID: "As Pontes 4",
-						PickUp:  aspontesLoc,
-						DropOff: sadaLoc,
+						RequestID: "As Pontes 4",
+						PickUp:    aspontesLoc,
+						DropOff:   sadaLoc,
 					},
 				},
 
@@ -305,24 +305,24 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 				},
 				Requests: []Request{
 					{
-						RiderID: "Pontevedra - Sada",
-						PickUp:  pontevedraLoc, // Pontevedra
-						DropOff: sadaLoc,       // Sada
+						RequestID: "Pontevedra - Sada",
+						PickUp:    pontevedraLoc, // Pontevedra
+						DropOff:   sadaLoc,       // Sada
 					},
 					{
-						RiderID: "Vilalba - Sada",
-						PickUp:  vilalbaLoc, // Vilalba
-						DropOff: sadaLoc,    // Sada
+						RequestID: "Vilalba - Sada",
+						PickUp:    vilalbaLoc, // Vilalba
+						DropOff:   sadaLoc,    // Sada
 					},
 					{
-						RiderID: "As Pontes - Sada",
-						PickUp:  aspontesLoc, // As Pontes
-						DropOff: sadaLoc,     // Sada
+						RequestID: "As Pontes - Sada",
+						PickUp:    aspontesLoc, // As Pontes
+						DropOff:   sadaLoc,     // Sada
 					},
 					{
-						RiderID: "As Pontes - Miño",
-						PickUp:  aspontesLoc, // As Pontes
-						DropOff: minoLoc,     // Miño
+						RequestID: "As Pontes - Miño",
+						PickUp:    aspontesLoc, // As Pontes
+						DropOff:   minoLoc,     // Miño
 					},
 				},
 				Constraints: Constraints{
@@ -368,14 +368,14 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 				},
 				Requests: []Request{
 					{
-						RiderID: "Order 1",
-						PickUp:  point.NewPoint(49.227107, -123.1163085),
-						DropOff: point.NewPoint(49.2474624, -123.1532338),
+						RequestID: "Order 1",
+						PickUp:    point.NewPoint(49.227107, -123.1163085),
+						DropOff:   point.NewPoint(49.2474624, -123.1532338),
 					},
 					{
-						RiderID: "Order 2",
-						PickUp:  point.NewPoint(49.2474624, -123.1532338),
-						DropOff: point.NewPoint(49.287107, -122.1163085),
+						RequestID: "Order 2",
+						PickUp:    point.NewPoint(49.2474624, -123.1532338),
+						DropOff:   point.NewPoint(49.287107, -122.1163085),
 					},
 				},
 				Constraints: Constraints{
@@ -607,9 +607,9 @@ func manyRequests(t *testing.T, oneOrigin point.Point) []Request {
 		{4.68548, -74.07004},
 	} {
 		many = append(many, Request{
-			RiderID: RiderID(fmt.Sprintf("Rider %d", i)),
-			PickUp:  oneOrigin,
-			DropOff: p,
+			RequestID: RequestID(fmt.Sprintf("Rider %d", i)),
+			PickUp:    oneOrigin,
+			DropOff:   p,
 		})
 	}
 	return many

@@ -45,17 +45,17 @@ type RouteMetrics struct {
 	Distance float64
 }
 type SolutionMetrics struct {
-	NumAssets  uint16
-	NumRiders  uint16
-	Duration   time.Duration
-	Distance   float64
-	SolvedTime time.Duration
+	NumAssets   uint16
+	NumRequests uint16
+	Duration    time.Duration
+	Distance    float64
+	SolvedTime  time.Duration
 }
 
 type Requests []*Request
 
 type Request struct {
-	RiderID            RiderID
+	RequestID          RequestID
 	PickUp             point.Point
 	DropOff            point.Point
 	PickUpServiceTime  time.Duration
@@ -80,15 +80,15 @@ func (r Route) GetPoints() []point.Point {
 
 type Stop struct {
 	Name        string
-	RiderID     *RiderID
+	RequestID   *RequestID
 	Point       point.Point
 	ServiceTime time.Duration
 }
 
-type RiderID string
+type RequestID string
 
 func (s Stop) IsDepot() bool {
-	return s.RiderID == nil
+	return s.RequestID == nil
 }
 
 func (s Stop) GetServiceTime() time.Duration {
