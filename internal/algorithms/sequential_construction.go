@@ -56,7 +56,6 @@ func (a *SequentialConstruction) Solve(ctx context.Context, p model.Problem) (*m
 		assetLocation := asset.Location
 		unassignedRequests := a.sortRequestFromDepotToDropOffFarthestFirst(ctx, assetLocation, unassignedRequests)
 		a.logger.Debugf("##  Creating a new route....")
-		usedAssets++
 		var r model.Route
 		var routeReqs []model.Request
 		var err error
@@ -106,6 +105,7 @@ func (a *SequentialConstruction) Solve(ctx context.Context, p model.Problem) (*m
 			Metrics:   model.RouteMetrics{Duration: re.TotalDuration, Distance: re.TotalDistance},
 		})
 
+		usedAssets++
 		if insertedRequests == totalRequests {
 			break
 		}
@@ -119,8 +119,8 @@ func (a *SequentialConstruction) Solve(ctx context.Context, p model.Problem) (*m
 	algoDuration := time.Since(algoStart)
 	s := model.Solution{
 		Metrics: model.SolutionMetrics{
-			NumAssets:   uint16(usedAssets),
-			NumRequests: uint16(insertedRequests),
+			NumAssets:   usedAssets,
+			NumRequests: insertedRequests,
 			Duration:    totalDuration,
 			Distance:    totalDistance,
 			SolvedTime:  algoDuration,
@@ -141,20 +141,19 @@ func buildWaypoints(points []point.Point, reqs []model.Request, asset model.Asse
 		var activities []model.Activity
 		if i == 0 {
 			activities = append(activities, model.NewActivity(model.ActivityTypeStart, model.Ref(asset.AssetID)))
-		} else {
-			for _, req := range reqs {
-				var activityType model.ActivityType
-				if req.DropOff == p {
-					activityType = model.ActivityTypeDropOff
-					load--
-				} else if req.PickUp == p {
-					activityType = model.ActivityTypePickUp
-					load++
-				} else {
-					continue
-				}
-				activities = append(activities, model.NewActivity(activityType, model.Ref(req.RequestID)))
+		}
+		for _, req := range reqs {
+			var activityType model.ActivityType
+			if req.DropOff == p {
+				activityType = model.ActivityTypeDropOff
+				load--
+			} else if req.PickUp == p {
+				activityType = model.ActivityTypePickUp
+				load++
+			} else {
+				continue
 			}
+			activities = append(activities, model.NewActivity(activityType, model.Ref(req.RequestID)))
 		}
 
 		waypoints = append(waypoints, model.Waypoint{

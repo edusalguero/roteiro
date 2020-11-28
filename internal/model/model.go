@@ -72,8 +72,8 @@ type RouteMetrics struct {
 	Distance float64
 }
 type SolutionMetrics struct {
-	NumAssets   uint16
-	NumRequests uint16
+	NumAssets   int
+	NumRequests int
 	Duration    time.Duration
 	Distance    float64
 	SolvedTime  time.Duration
