@@ -9,7 +9,7 @@ import (
 
 type Problem struct {
 	Fleet       []Asset
-	Requests    []RiderRequest
+	Requests    []Request
 	Constraints Constraints
 }
 
@@ -31,8 +31,9 @@ type Constraints struct {
 }
 
 type Solution struct {
-	Metrics SolutionMetrics
-	Routes  []SolutionRoute
+	Metrics    SolutionMetrics
+	Routes     []SolutionRoute
+	Unassigned []Request
 }
 
 type SolutionRoute struct {
@@ -51,9 +52,9 @@ type SolutionMetrics struct {
 	SolvedTime time.Duration
 }
 
-type Requests []*RiderRequest
+type Requests []*Request
 
-type RiderRequest struct {
+type Request struct {
 	RiderID            RiderID
 	PickUp             point.Point
 	DropOff            point.Point

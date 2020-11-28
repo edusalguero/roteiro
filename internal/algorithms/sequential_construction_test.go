@@ -36,11 +36,12 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 	routeE := routeestimator.NewEstimator(e)
 
 	tests := []struct {
-		name    string
-		problem Problem
-		want    []SolutionRoute
-		wantErr bool
-		skip    bool
+		name           string
+		problem        Problem
+		solutionRoutes []SolutionRoute
+		unassigned     []Request
+		wantErr        bool
+		skip           bool
 	}{
 		{
 			"Same pickup same dropoff",
@@ -52,7 +53,7 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 						Capacity: 4,
 					},
 				},
-				Requests: []RiderRequest{
+				Requests: []Request{
 					{
 						RiderID: "As Pontes 1",
 						PickUp:  aspontesLoc,
@@ -88,6 +89,197 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 					},
 				},
 			},
+			[]Request{},
+			false,
+			false,
+		},
+		{
+			"Different assets, same pickup and same dropoff",
+			Problem{
+				Fleet: []Asset{
+					{
+						AssetID:  "Miño Asset",
+						Location: minoLoc,
+						Capacity: 2,
+					},
+					{
+						AssetID:  "As Pontes Asset",
+						Location: aspontesLoc,
+						Capacity: 2,
+					},
+				},
+				Requests: []Request{
+					{
+						RiderID: "As Pontes 1",
+						PickUp:  aspontesLoc,
+						DropOff: sadaLoc,
+					},
+					{
+						RiderID: "As Pontes 2",
+						PickUp:  aspontesLoc,
+						DropOff: sadaLoc,
+					},
+					{
+						RiderID: "As Pontes 3",
+						PickUp:  aspontesLoc,
+						DropOff: sadaLoc,
+					},
+					{
+						RiderID: "As Pontes 4",
+						PickUp:  aspontesLoc,
+						DropOff: sadaLoc,
+					},
+				},
+
+				Constraints: Constraints{
+					MaxJourneyTimeFactor: 1.5,
+				},
+			},
+			[]SolutionRoute{
+				{
+					Route: []point.Point{minoLoc, aspontesLoc, sadaLoc},
+					Metrics: RouteMetrics{
+						Duration: 3007990710701,
+						Distance: 66844,
+					},
+				},
+				{
+					Route: []point.Point{aspontesLoc, sadaLoc},
+					Metrics: RouteMetrics{
+						Duration: 1624557459203,
+						Distance: 36101,
+					},
+				},
+			},
+			[]Request{},
+			false,
+			false,
+		},
+		{
+			"Insufficient capacity",
+			Problem{
+				Fleet: []Asset{
+					{
+						AssetID:  "As Pontes Asset",
+						Location: aspontesLoc,
+						Capacity: 2,
+					},
+					{
+						AssetID:  "Miño Asset",
+						Location: minoLoc,
+						Capacity: 1,
+					},
+				},
+				Requests: []Request{
+					{
+						RiderID: "As Pontes 1",
+						PickUp:  aspontesLoc,
+						DropOff: sadaLoc,
+					},
+					{
+						RiderID: "As Pontes 2",
+						PickUp:  aspontesLoc,
+						DropOff: sadaLoc,
+					},
+					{
+						RiderID: "As Pontes 3",
+						PickUp:  aspontesLoc,
+						DropOff: sadaLoc,
+					},
+					{
+						RiderID: "As Pontes 4",
+						PickUp:  aspontesLoc,
+						DropOff: sadaLoc,
+					},
+				},
+
+				Constraints: Constraints{
+					MaxJourneyTimeFactor: 1.5,
+				},
+			},
+			[]SolutionRoute{
+				{
+					Route: []point.Point{aspontesLoc, sadaLoc},
+					Metrics: RouteMetrics{
+						Duration: 1624557459203,
+						Distance: 36101,
+					},
+				},
+				{
+					Route: []point.Point{minoLoc, aspontesLoc, sadaLoc},
+					Metrics: RouteMetrics{
+						Duration: 3007990710701,
+						Distance: 66844,
+					},
+				},
+			},
+			[]Request{{
+				RiderID: "As Pontes 4",
+				PickUp:  aspontesLoc,
+				DropOff: sadaLoc,
+			}},
+			false,
+			false,
+		},
+		{
+			"Different capacity assets, same pickup and same dropoff",
+			Problem{
+				Fleet: []Asset{
+					{
+						AssetID:  "As Pontes Asset",
+						Location: aspontesLoc,
+						Capacity: 3,
+					},
+					{
+						AssetID:  "Miño Asset",
+						Location: minoLoc,
+						Capacity: 2,
+					},
+				},
+				Requests: []Request{
+					{
+						RiderID: "As Pontes 1",
+						PickUp:  aspontesLoc,
+						DropOff: sadaLoc,
+					},
+					{
+						RiderID: "As Pontes 2",
+						PickUp:  aspontesLoc,
+						DropOff: sadaLoc,
+					},
+					{
+						RiderID: "As Pontes 3",
+						PickUp:  aspontesLoc,
+						DropOff: sadaLoc,
+					},
+					{
+						RiderID: "As Pontes 4",
+						PickUp:  aspontesLoc,
+						DropOff: sadaLoc,
+					},
+				},
+
+				Constraints: Constraints{
+					MaxJourneyTimeFactor: 1.5,
+				},
+			},
+			[]SolutionRoute{
+				{
+					Route: []point.Point{aspontesLoc, sadaLoc},
+					Metrics: RouteMetrics{
+						Duration: 1624557459203,
+						Distance: 36101,
+					},
+				},
+				{
+					Route: []point.Point{minoLoc, aspontesLoc, sadaLoc},
+					Metrics: RouteMetrics{
+						Duration: 3007990710701,
+						Distance: 66844,
+					},
+				},
+			},
+			[]Request{},
 			false,
 			false,
 		},
@@ -100,8 +292,18 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 						Location: pontedeumeLoc,
 						Capacity: 4,
 					},
+					{
+						AssetID:  "Pontedeume Asset",
+						Location: pontedeumeLoc,
+						Capacity: 4,
+					},
+					{
+						AssetID:  "Pontedeume Asset",
+						Location: pontedeumeLoc,
+						Capacity: 4,
+					},
 				},
-				Requests: []RiderRequest{
+				Requests: []Request{
 					{
 						RiderID: "Pontevedra - Sada",
 						PickUp:  pontevedraLoc, // Pontevedra
@@ -150,6 +352,7 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 					},
 				},
 			},
+			[]Request{},
 			false,
 			false,
 		},
@@ -163,7 +366,7 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 						Capacity: 4,
 					},
 				},
-				Requests: []RiderRequest{
+				Requests: []Request{
 					{
 						RiderID: "Order 1",
 						PickUp:  point.NewPoint(49.227107, -123.1163085),
@@ -193,6 +396,7 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 					},
 				},
 			},
+			[]Request{},
 			false,
 			false,
 		},
@@ -200,6 +404,41 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 			"One to many",
 			Problem{
 				Fleet: []Asset{
+					{
+						AssetID:  "Asset",
+						Location: oneOrigin,
+						Capacity: 4,
+					},
+					{
+						AssetID:  "Asset",
+						Location: oneOrigin,
+						Capacity: 4,
+					},
+					{
+						AssetID:  "Asset",
+						Location: oneOrigin,
+						Capacity: 4,
+					},
+					{
+						AssetID:  "Asset",
+						Location: oneOrigin,
+						Capacity: 4,
+					},
+					{
+						AssetID:  "Asset",
+						Location: oneOrigin,
+						Capacity: 4,
+					},
+					{
+						AssetID:  "Asset",
+						Location: oneOrigin,
+						Capacity: 4,
+					},
+					{
+						AssetID:  "Asset",
+						Location: oneOrigin,
+						Capacity: 4,
+					},
 					{
 						AssetID:  "Asset",
 						Location: oneOrigin,
@@ -311,6 +550,7 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 					},
 				},
 			},
+			[]Request{},
 			false,
 			false,
 		},
@@ -329,14 +569,15 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 				return
 			}
 			assert.NotNil(t, got)
-			assert.Equal(t, tt.want, got.Routes)
+			assert.Equal(t, tt.solutionRoutes, got.Routes)
+			assert.Equal(t, tt.unassigned, got.Unassigned)
 		})
 	}
 }
 
-func manyRequests(t *testing.T, oneOrigin point.Point) []RiderRequest {
+func manyRequests(t *testing.T, oneOrigin point.Point) []Request {
 	t.Helper()
-	var many []RiderRequest
+	var many []Request
 	for i, p := range []point.Point{
 		{4.56418, -74.08705},
 		{4.52924, -74.08894},
@@ -365,7 +606,7 @@ func manyRequests(t *testing.T, oneOrigin point.Point) []RiderRequest {
 		{4.6329, -74.06282},
 		{4.68548, -74.07004},
 	} {
-		many = append(many, RiderRequest{
+		many = append(many, Request{
 			RiderID: RiderID(fmt.Sprintf("Rider %d", i)),
 			PickUp:  oneOrigin,
 			DropOff: p,
