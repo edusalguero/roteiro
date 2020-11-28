@@ -1,4 +1,4 @@
-package algorithms
+package model
 
 import (
 	"fmt"
@@ -37,9 +37,36 @@ type Solution struct {
 }
 
 type SolutionRoute struct {
-	Route   []point.Point
-	Metrics RouteMetrics
+	Asset     Asset
+	Requests  []Request
+	Waypoints []Waypoint
+	Metrics   RouteMetrics
 }
+
+type Waypoint struct {
+	Location   point.Point
+	Load       Capacity
+	Activities []Activity
+}
+
+type Ref string
+type ActivityType string
+
+type Activity struct {
+	ActivityType ActivityType
+	Ref          Ref
+}
+
+func NewActivity(activityType ActivityType, ref Ref) Activity {
+	return Activity{ActivityType: activityType, Ref: ref}
+}
+
+const (
+	ActivityTypePickUp  ActivityType = "PickUp"
+	ActivityTypeDropOff ActivityType = "DropOff"
+	ActivityTypeStart   ActivityType = "Start"
+)
+
 type RouteMetrics struct {
 	Duration time.Duration
 	Distance float64

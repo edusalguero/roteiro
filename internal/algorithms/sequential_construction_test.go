@@ -8,6 +8,7 @@ import (
 	"github.com/edusalguero/roteiro.git/internal/config"
 	"github.com/edusalguero/roteiro.git/internal/distanceestimator"
 	"github.com/edusalguero/roteiro.git/internal/logger"
+	"github.com/edusalguero/roteiro.git/internal/model"
 	"github.com/edusalguero/roteiro.git/internal/point"
 	"github.com/edusalguero/roteiro.git/internal/routeestimator"
 	"github.com/stretchr/testify/assert"
@@ -20,6 +21,8 @@ var sadaLoc = point.NewPoint(43.347306, -8.276904)
 var pontevedraLoc = point.NewPoint(42.4336114, -8.6475)
 var vilalbaLoc = point.NewPoint(43.296272, -7.67861)
 var oneOrigin = point.NewPoint(4.68295, -74.04965)
+
+type Route []point.Point
 
 func TestSequentialConstruction_Solve(t *testing.T) {
 	cnf, err := config.Get()
@@ -36,24 +39,24 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 	routeE := routeestimator.NewEstimator(e)
 
 	tests := []struct {
-		name           string
-		problem        Problem
-		solutionRoutes []SolutionRoute
-		unassigned     []Request
-		wantErr        bool
-		skip           bool
+		name       string
+		problem    model.Problem
+		routes     []Route
+		unassigned []model.Request
+		wantErr    bool
+		skip       bool
 	}{
 		{
 			"Same pickup same dropoff",
-			Problem{
-				Fleet: []Asset{
+			model.Problem{
+				Fleet: []model.Asset{
 					{
 						AssetID:  "Miño Asset",
 						Location: minoLoc,
 						Capacity: 4,
 					},
 				},
-				Requests: []Request{
+				Requests: []model.Request{
 					{
 						RequestID: "As Pontes 1",
 						PickUp:    aspontesLoc,
@@ -75,28 +78,19 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 						DropOff:   sadaLoc,
 					},
 				},
-
-				Constraints: Constraints{
+				Constraints: model.Constraints{
 					MaxJourneyTimeFactor: 1.5,
 				},
 			},
-			[]SolutionRoute{
-				{
-					Route: []point.Point{minoLoc, aspontesLoc, sadaLoc},
-					Metrics: RouteMetrics{
-						Duration: 3007990710701,
-						Distance: 66844,
-					},
-				},
-			},
-			[]Request{},
+			[]Route{[]point.Point{minoLoc, aspontesLoc, sadaLoc}},
+			[]model.Request{},
 			false,
 			false,
 		},
 		{
 			"Different assets, same pickup and same dropoff",
-			Problem{
-				Fleet: []Asset{
+			model.Problem{
+				Fleet: []model.Asset{
 					{
 						AssetID:  "Miño Asset",
 						Location: minoLoc,
@@ -108,7 +102,7 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 						Capacity: 2,
 					},
 				},
-				Requests: []Request{
+				Requests: []model.Request{
 					{
 						RequestID: "As Pontes 1",
 						PickUp:    aspontesLoc,
@@ -131,34 +125,22 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 					},
 				},
 
-				Constraints: Constraints{
+				Constraints: model.Constraints{
 					MaxJourneyTimeFactor: 1.5,
 				},
 			},
-			[]SolutionRoute{
-				{
-					Route: []point.Point{minoLoc, aspontesLoc, sadaLoc},
-					Metrics: RouteMetrics{
-						Duration: 3007990710701,
-						Distance: 66844,
-					},
-				},
-				{
-					Route: []point.Point{aspontesLoc, sadaLoc},
-					Metrics: RouteMetrics{
-						Duration: 1624557459203,
-						Distance: 36101,
-					},
-				},
+			[]Route{
+				[]point.Point{minoLoc, aspontesLoc, sadaLoc},
+				[]point.Point{aspontesLoc, sadaLoc},
 			},
-			[]Request{},
+			[]model.Request{},
 			false,
 			false,
 		},
 		{
 			"Insufficient capacity",
-			Problem{
-				Fleet: []Asset{
+			model.Problem{
+				Fleet: []model.Asset{
 					{
 						AssetID:  "As Pontes Asset",
 						Location: aspontesLoc,
@@ -170,7 +152,7 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 						Capacity: 1,
 					},
 				},
-				Requests: []Request{
+				Requests: []model.Request{
 					{
 						RequestID: "As Pontes 1",
 						PickUp:    aspontesLoc,
@@ -193,27 +175,15 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 					},
 				},
 
-				Constraints: Constraints{
+				Constraints: model.Constraints{
 					MaxJourneyTimeFactor: 1.5,
 				},
 			},
-			[]SolutionRoute{
-				{
-					Route: []point.Point{aspontesLoc, sadaLoc},
-					Metrics: RouteMetrics{
-						Duration: 1624557459203,
-						Distance: 36101,
-					},
-				},
-				{
-					Route: []point.Point{minoLoc, aspontesLoc, sadaLoc},
-					Metrics: RouteMetrics{
-						Duration: 3007990710701,
-						Distance: 66844,
-					},
-				},
+			[]Route{
+				[]point.Point{aspontesLoc, sadaLoc},
+				[]point.Point{minoLoc, aspontesLoc, sadaLoc},
 			},
-			[]Request{{
+			[]model.Request{{
 				RequestID: "As Pontes 4",
 				PickUp:    aspontesLoc,
 				DropOff:   sadaLoc,
@@ -223,8 +193,8 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 		},
 		{
 			"Different capacity assets, same pickup and same dropoff",
-			Problem{
-				Fleet: []Asset{
+			model.Problem{
+				Fleet: []model.Asset{
 					{
 						AssetID:  "As Pontes Asset",
 						Location: aspontesLoc,
@@ -236,7 +206,7 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 						Capacity: 2,
 					},
 				},
-				Requests: []Request{
+				Requests: []model.Request{
 					{
 						RequestID: "As Pontes 1",
 						PickUp:    aspontesLoc,
@@ -259,34 +229,22 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 					},
 				},
 
-				Constraints: Constraints{
+				Constraints: model.Constraints{
 					MaxJourneyTimeFactor: 1.5,
 				},
 			},
-			[]SolutionRoute{
-				{
-					Route: []point.Point{aspontesLoc, sadaLoc},
-					Metrics: RouteMetrics{
-						Duration: 1624557459203,
-						Distance: 36101,
-					},
-				},
-				{
-					Route: []point.Point{minoLoc, aspontesLoc, sadaLoc},
-					Metrics: RouteMetrics{
-						Duration: 3007990710701,
-						Distance: 66844,
-					},
-				},
+			[]Route{
+				[]point.Point{aspontesLoc, sadaLoc},
+				[]point.Point{minoLoc, aspontesLoc, sadaLoc},
 			},
-			[]Request{},
+			[]model.Request{},
 			false,
 			false,
 		},
 		{
 			"Simple routing",
-			Problem{
-				Fleet: []Asset{
+			model.Problem{
+				Fleet: []model.Asset{
 					{
 						AssetID:  "Pontedeume Asset",
 						Location: pontedeumeLoc,
@@ -303,7 +261,7 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 						Capacity: 4,
 					},
 				},
-				Requests: []Request{
+				Requests: []model.Request{
 					{
 						RequestID: "Pontevedra - Sada",
 						PickUp:    pontevedraLoc, // Pontevedra
@@ -325,48 +283,30 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 						DropOff:   minoLoc,     // Miño
 					},
 				},
-				Constraints: Constraints{
+				Constraints: model.Constraints{
 					MaxJourneyTimeFactor: 1.5,
 				},
 			},
-			[]SolutionRoute{
-				{
-					Route: []point.Point{pontedeumeLoc, pontevedraLoc, sadaLoc},
-					Metrics: RouteMetrics{
-						Duration: 9943722533515,
-						Distance: 220972,
-					},
-				},
-				{
-					Route: []point.Point{pontedeumeLoc, vilalbaLoc, sadaLoc},
-					Metrics: RouteMetrics{
-						Duration: 4071613441518,
-						Distance: 90480,
-					},
-				},
-				{
-					Route: []point.Point{pontedeumeLoc, aspontesLoc, minoLoc, sadaLoc},
-					Metrics: RouteMetrics{
-						Duration: 2818183252084,
-						Distance: 62626,
-					},
-				},
+			[]Route{
+				[]point.Point{pontedeumeLoc, pontevedraLoc, sadaLoc},
+				[]point.Point{pontedeumeLoc, vilalbaLoc, sadaLoc},
+				[]point.Point{pontedeumeLoc, aspontesLoc, minoLoc, sadaLoc},
 			},
-			[]Request{},
+			[]model.Request{},
 			false,
 			false,
 		},
 		{
 			"Routific example",
-			Problem{
-				Fleet: []Asset{
+			model.Problem{
+				Fleet: []model.Asset{
 					{
 						AssetID:  "Asset",
 						Location: point.NewPoint(49.2553636, -123.0873365),
 						Capacity: 4,
 					},
 				},
-				Requests: []Request{
+				Requests: []model.Request{
 					{
 						RequestID: "Order 1",
 						PickUp:    point.NewPoint(49.227107, -123.1163085),
@@ -378,179 +318,125 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 						DropOff:   point.NewPoint(49.287107, -122.1163085),
 					},
 				},
-				Constraints: Constraints{
+				Constraints: model.Constraints{
 					MaxJourneyTimeFactor: 1.5,
 				},
 			},
-			[]SolutionRoute{
-				{
-					Route: []point.Point{
-						point.NewPoint(49.2553636, -123.0873365), // Depot
-						point.NewPoint(49.227107, -123.1163085),  // Order 1 PickUP
-						point.NewPoint(49.2474624, -123.1532338), // Order 1 DropOff - Order 2 PickUp
-						point.NewPoint(49.287107, -122.1163085),  // Order 2 Drop off
-					},
-					Metrics: RouteMetrics{
-						Duration: 3719492063273,
-						Distance: 82656,
-					},
+			[]Route{
+				[]point.Point{
+					point.NewPoint(49.2553636, -123.0873365), // Depot
+					point.NewPoint(49.227107, -123.1163085),  // Order 1 PickUP
+					point.NewPoint(49.2474624, -123.1532338), // Order 1 DropOff - Order 2 PickUp
+					point.NewPoint(49.287107, -122.1163085),  // Order 2 Drop off
 				},
 			},
-			[]Request{},
+			[]model.Request{},
 			false,
 			false,
 		},
 		{
 			"One to many",
-			Problem{
-				Fleet: []Asset{
+			model.Problem{
+				Fleet: []model.Asset{
 					{
-						AssetID:  "Asset",
+						AssetID:  "Asset 1",
 						Location: oneOrigin,
 						Capacity: 4,
 					},
 					{
-						AssetID:  "Asset",
+						AssetID:  "Asset 2",
 						Location: oneOrigin,
 						Capacity: 4,
 					},
 					{
-						AssetID:  "Asset",
+						AssetID:  "Asset 3",
 						Location: oneOrigin,
 						Capacity: 4,
 					},
 					{
-						AssetID:  "Asset",
+						AssetID:  "Asset 4",
 						Location: oneOrigin,
 						Capacity: 4,
 					},
 					{
-						AssetID:  "Asset",
+						AssetID:  "Asset 5",
 						Location: oneOrigin,
 						Capacity: 4,
 					},
 					{
-						AssetID:  "Asset",
+						AssetID:  "Asset 6",
 						Location: oneOrigin,
 						Capacity: 4,
 					},
 					{
-						AssetID:  "Asset",
+						AssetID:  "Asset 7",
 						Location: oneOrigin,
 						Capacity: 4,
 					},
 					{
-						AssetID:  "Asset",
+						AssetID:  "Asset 8",
 						Location: oneOrigin,
 						Capacity: 4,
 					},
 				},
 				Requests: manyRequests(t, oneOrigin),
-				Constraints: Constraints{
+				Constraints: model.Constraints{
 					MaxJourneyTimeFactor: 1.5,
 				},
 			},
-			[]SolutionRoute{
-				{
-					Route: []point.Point{
-						point.NewPoint(4.682950, -74.049650),
-						point.NewPoint(4.625660, -74.137240),
-						point.NewPoint(4.606340, -74.146500),
-						point.NewPoint(4.579290, -74.154500),
-						point.NewPoint(4.529240, -74.088940),
-					},
-					Metrics: RouteMetrics{
-						Duration: 1182639057395,
-						Distance: 26281,
-					},
+			[]Route{
+				[]point.Point{
+					point.NewPoint(4.682950, -74.049650),
+					point.NewPoint(4.625660, -74.137240),
+					point.NewPoint(4.606340, -74.146500),
+					point.NewPoint(4.579290, -74.154500),
+					point.NewPoint(4.529240, -74.088940),
 				},
-				{
-					Route: []point.Point{
-						point.NewPoint(4.682950, -74.049650),
-						point.NewPoint(4.635770, -74.156810),
-						point.NewPoint(4.650390, -74.170110),
-						point.NewPoint(4.629630, -74.175660),
-						point.NewPoint(4.589630, -74.174800),
-					},
-					Metrics: RouteMetrics{
-						Duration: 990701924097,
-						Distance: 22015,
-					},
+				[]point.Point{
+					point.NewPoint(4.682950, -74.049650),
+					point.NewPoint(4.635770, -74.156810),
+					point.NewPoint(4.650390, -74.170110),
+					point.NewPoint(4.629630, -74.175660),
+					point.NewPoint(4.589630, -74.174800),
 				},
-				{
-					Route: []point.Point{
-						point.NewPoint(4.682950, -74.049650),
-						point.NewPoint(4.632900, -74.062820),
-						point.NewPoint(4.562940, -74.067940),
-						point.NewPoint(4.574190, -74.106780),
-						point.NewPoint(4.564180, -74.087050),
-					},
-					Metrics: RouteMetrics{
-						Duration: 922068500653,
-						Distance: 20491,
-					},
+				[]point.Point{
+					point.NewPoint(4.682950, -74.049650),
+					point.NewPoint(4.632900, -74.062820),
+					point.NewPoint(4.562940, -74.067940),
+					point.NewPoint(4.574190, -74.106780),
+					point.NewPoint(4.564180, -74.087050),
 				},
-				{
-					Route: []point.Point{
-						point.NewPoint(4.682950, -74.049650),
-						point.NewPoint(4.685480, -74.070040),
-						point.NewPoint(4.689680, -74.112080),
-						point.NewPoint(4.618860, -74.128050),
-						point.NewPoint(4.602650, -74.125650),
-					},
-					Metrics: RouteMetrics{
-						Duration: 758373847392,
-						Distance: 16852,
-					},
+				[]point.Point{
+					point.NewPoint(4.682950, -74.049650),
+					point.NewPoint(4.685480, -74.070040),
+					point.NewPoint(4.689680, -74.112080),
+					point.NewPoint(4.618860, -74.128050),
+					point.NewPoint(4.602650, -74.125650),
 				},
-				{
-					Route: []point.Point{
-						point.NewPoint(4.682950, -74.049650),
-						point.NewPoint(4.708840, -74.114480),
-						point.NewPoint(4.722910, -74.131050),
-						point.NewPoint(4.691230, -74.147890),
-					},
-					Metrics: RouteMetrics{
-						Duration: 636242010369,
-						Distance: 14138,
-					},
+				[]point.Point{
+					point.NewPoint(4.682950, -74.049650),
+					point.NewPoint(4.708840, -74.114480),
+					point.NewPoint(4.722910, -74.131050),
+					point.NewPoint(4.691230, -74.147890),
 				},
-				{
-					Route: []point.Point{
-						point.NewPoint(4.682950, -74.049650),
-						point.NewPoint(4.753690, -74.100280),
-						point.NewPoint(4.747060, -74.112300),
-						point.NewPoint(4.758210, -74.100110),
-						point.NewPoint(4.758280, -74.104930),
-					},
-					Metrics: RouteMetrics{
-						Duration: 609840857983,
-						Distance: 13552,
-					},
+				[]point.Point{
+					point.NewPoint(4.682950, -74.049650),
+					point.NewPoint(4.753690, -74.100280),
+					point.NewPoint(4.747060, -74.112300),
+					point.NewPoint(4.758210, -74.100110),
+					point.NewPoint(4.758280, -74.104930),
 				},
-				{
-					Route: []point.Point{
-						point.NewPoint(4.682950, -74.049650),
-						point.NewPoint(4.757960, -74.037860),
-						point.NewPoint(4.758860, -74.090600),
-					},
-					Metrics: RouteMetrics{
-						Duration: 642937858539,
-						Distance: 14287,
-					},
+				[]point.Point{
+					point.NewPoint(4.682950, -74.049650),
+					point.NewPoint(4.757960, -74.037860),
+					point.NewPoint(4.758860, -74.090600),
 				},
-				{
-					Route: []point.Point{
-						point.NewPoint(4.682950, -74.049650),
-						point.NewPoint(4.721290, -74.055900),
-					},
-					Metrics: RouteMetrics{
-						Duration: 194360019503,
-						Distance: 4319,
-					},
+				[]point.Point{
+					point.NewPoint(4.682950, -74.049650),
+					point.NewPoint(4.721290, -74.055900),
 				},
 			},
-			[]Request{},
+			[]model.Request{},
 			false,
 			false,
 		},
@@ -569,15 +455,32 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 				return
 			}
 			assert.NotNil(t, got)
-			assert.Equal(t, tt.solutionRoutes, got.Routes)
+			if got == nil {
+				t.Errorf("Solve() is nil")
+				return
+			}
+			assert.Equal(t, tt.routes, getTestRoutes(t, got.Routes))
 			assert.Equal(t, tt.unassigned, got.Unassigned)
 		})
 	}
 }
 
-func manyRequests(t *testing.T, oneOrigin point.Point) []Request {
+func getTestRoutes(t *testing.T, routes []model.SolutionRoute) []Route {
 	t.Helper()
-	var many []Request
+	var testRoutes []Route
+	for _, r := range routes {
+		var route Route
+		for _, p := range r.Waypoints {
+			route = append(route, p.Location)
+		}
+		testRoutes = append(testRoutes, route)
+	}
+	return testRoutes
+}
+
+func manyRequests(t *testing.T, oneOrigin point.Point) []model.Request {
+	t.Helper()
+	var many []model.Request
 	for i, p := range []point.Point{
 		{4.56418, -74.08705},
 		{4.52924, -74.08894},
@@ -606,11 +509,69 @@ func manyRequests(t *testing.T, oneOrigin point.Point) []Request {
 		{4.6329, -74.06282},
 		{4.68548, -74.07004},
 	} {
-		many = append(many, Request{
-			RequestID: RequestID(fmt.Sprintf("Rider %d", i)),
+		many = append(many, model.Request{
+			RequestID: model.RequestID(fmt.Sprintf("Rider %d", i)),
 			PickUp:    oneOrigin,
 			DropOff:   p,
 		})
 	}
 	return many
+}
+
+func Test_buildWaypoints(t *testing.T) {
+	t.Run("Build Waypoints", func(t *testing.T) {
+		asset := model.Asset{
+			AssetID:  "Pontedeume Asset",
+			Location: pontedeumeLoc,
+			Capacity: 4,
+		}
+		reqs := []model.Request{
+			{
+				RequestID: "As Pontes - Sada",
+				PickUp:    aspontesLoc, // As Pontes
+				DropOff:   sadaLoc,     // Sada
+			},
+			{
+				RequestID: "As Pontes - Miño",
+				PickUp:    aspontesLoc, // As Pontes
+				DropOff:   minoLoc,     // Miño
+			},
+		}
+
+		points := []point.Point{pontedeumeLoc, aspontesLoc, minoLoc, sadaLoc}
+
+		waypoints := []model.Waypoint{
+			{
+				Location: pontedeumeLoc,
+				Load:     0,
+				Activities: []model.Activity{
+					model.NewActivity(model.ActivityTypeStart, "Pontedeume Asset"),
+				},
+			},
+			{
+				Location: aspontesLoc,
+				Load:     2,
+				Activities: []model.Activity{
+					model.NewActivity(model.ActivityTypePickUp, "As Pontes - Sada"),
+					model.NewActivity(model.ActivityTypePickUp, "As Pontes - Miño"),
+				},
+			},
+			{
+				Location: minoLoc,
+				Load:     1,
+				Activities: []model.Activity{
+					model.NewActivity(model.ActivityTypeDropOff, "As Pontes - Miño"),
+				},
+			},
+			{
+				Location: sadaLoc,
+				Load:     0,
+				Activities: []model.Activity{
+					model.NewActivity(model.ActivityTypeDropOff, "As Pontes - Sada"),
+				},
+			},
+		}
+		got := buildWaypoints(points, reqs, asset)
+		assert.Equal(t, waypoints, got)
+	})
 }
