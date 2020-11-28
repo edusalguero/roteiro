@@ -16,11 +16,10 @@ import (
 
 	"github.com/edusalguero/roteiro.git/internal/distanceestimator"
 	"github.com/edusalguero/roteiro.git/internal/logger"
+	"github.com/edusalguero/roteiro.git/internal/model"
 	"github.com/edusalguero/roteiro.git/internal/point"
 	"github.com/edusalguero/roteiro.git/internal/routeestimator"
 )
-
-const assetsCapacity = 4
 
 type SequentialConstruction struct {
 	logger            logger.Logger
@@ -34,31 +33,37 @@ func NewSequentialConstruction(l logger.Logger, e routeestimator.Estimator, de d
 
 // Based on algorithm 2: The Sequential Construction
 // https://www.sciencedirect.com/science/article/pii/S131915781100036X#n0040
-func (a *SequentialConstruction) Solve(ctx context.Context, p Problem) (*Solution, error) {
+func (a *SequentialConstruction) Solve(ctx context.Context, p model.Problem) (*model.Solution, error) {
 	algoStart := time.Now()
 	usedAssets := 0
 	insertedRequests := 0
 
-	requests := a.sortRequestFromDepotToDropOffFarthestFirst(ctx, p.DepotLocation, p.Requests)
+	assets := p.Fleet
+	availableAssets := len(assets)
+	totalRequests := len(p.Requests)
 
-	var unassignedRequests Requests
-	for i := range requests {
-		unassignedRequests = append(unassignedRequests, &requests[i])
+	var unassignedRequests model.Requests
+	for i := range p.Requests {
+		unassignedRequests = append(unassignedRequests, &p.Requests[i])
 	}
 
-	totalRequests := len(requests)
+	var solutionRoutes []model.SolutionRoute
+	var totalDistance float64 = 0
+	var totalDuration time.Duration
+	assets = assetsWithMoreCapacityFirst(assets)
 
-	var routes []Route
-	for {
+	for _, asset := range assets {
+		assetLocation := asset.Location
+		unassignedRequests := a.sortRequestFromDepotToDropOffFarthestFirst(ctx, assetLocation, unassignedRequests)
 		a.logger.Debugf("##  Creating a new route....")
-		usedAssets++
-		var r Route
+		var r model.Route
+		var routeReqs []model.Request
 		var err error
 
-		r = append(r, &Stop{
+		r = append(r, &model.Stop{
 			Name:        "Asset",
-			RiderID:     nil,
-			Point:       p.DepotLocation,
+			RequestID:   nil,
+			Point:       assetLocation,
 			ServiceTime: 0,
 		})
 
@@ -68,72 +73,138 @@ func (a *SequentialConstruction) Solve(ctx context.Context, p Problem) (*Solutio
 				continue
 			}
 			req := *ur
-			a.logger.Debugf("###  Adding request a new route: %s", req.RiderID)
-			r = a.addRequestStops(ctx, r, p.DepotLocation, req, p.GetMaxJourneyTimeFactor())
-
-			r, err = a.hillClimbingRoutingAlgorithmV2(ctx, r)
+			a.logger.Debugf("###  Adding request a new route: %s", req.RequestID)
+			r = a.addRequestStops(ctx, r, assetLocation, req, p.GetMaxJourneyTimeFactor())
+			r, err = a.hillClimbingRoutingAlgorithmV2(ctx, r, asset)
 			if err != nil {
 				return nil, err
 			}
 
-			if a.isFeasibleRoute(ctx, assetsCapacity, r) {
+			if a.isFeasibleRoute(ctx, r, asset) {
 				// Remove from unassignedRequests
 				unassignedRequests[i] = nil
 				insertedRequests++
+				routeReqs = append(routeReqs, model.Request{
+					RequestID: req.RequestID,
+					PickUp:    req.PickUp,
+					DropOff:   req.DropOff,
+				})
 			} else {
 				// Remove req from r
 				r = removeFromRoute(r, *req)
 			}
 		}
-		routes = append(routes, r)
 
+		re, _ := a.routeEstimator.GetRouteEstimation(ctx, r.GetPoints())
+		totalDuration += re.TotalDuration
+		totalDistance += re.TotalDistance
+		solutionRoutes = append(solutionRoutes, model.SolutionRoute{
+			Asset:     asset,
+			Requests:  routeReqs,
+			Waypoints: buildWaypoints(point.UniquePoints(r.GetPoints()), routeReqs, asset),
+			Metrics:   model.RouteMetrics{Duration: re.TotalDuration, Distance: re.TotalDistance},
+		})
+
+		usedAssets++
 		if insertedRequests == totalRequests {
+			break
+		}
+
+		if usedAssets == availableAssets {
 			break
 		}
 	}
 
-	var solutionRoutes []SolutionRoute
-	var distance float64 = 0
-	var duration time.Duration
-
-	for _, r := range routes {
-		re, _ := a.routeEstimator.GetRouteEstimation(ctx, r.GetPoints())
-		duration += re.TotalDuration
-		distance += re.TotalDistance
-		solutionRoutes = append(solutionRoutes, SolutionRoute{
-			Route:   point.UniquePoints(r.GetPoints()),
-			Metrics: RouteMetrics{Duration: re.TotalDuration, Distance: re.TotalDistance},
-		})
-	}
-
+	unassigned := getNotAssignedRequest(unassignedRequests)
 	algoDuration := time.Since(algoStart)
-	s := Solution{
-		Metrics: SolutionMetrics{
-			NumAssets:  uint16(usedAssets),
-			NumRiders:  uint16(insertedRequests),
-			Duration:   duration,
-			Distance:   distance,
-			SolvedTime: algoDuration,
+	s := model.Solution{
+		Metrics: model.SolutionMetrics{
+			NumAssets:   usedAssets,
+			NumRequests: insertedRequests,
+			Duration:    totalDuration,
+			Distance:    totalDistance,
+			SolvedTime:  algoDuration,
 		},
-		Routes: solutionRoutes,
+		Routes:     solutionRoutes,
+		Unassigned: unassigned,
 	}
 	a.logger.Debugf("Solution: %v", s)
 
 	return &s, nil
 }
 
-func (a *SequentialConstruction) addRequestStops(ctx context.Context, r Route, assetLocation point.Point, req *RiderRequest, timeFactor float64) Route {
+func buildWaypoints(points []point.Point, reqs []model.Request, asset model.Asset) []model.Waypoint {
+	var waypoints []model.Waypoint
+
+	var load model.Capacity = 0
+	for i, p := range points {
+		var activities []model.Activity
+		if i == 0 {
+			activities = append(activities, model.NewActivity(model.ActivityTypeStart, model.Ref(asset.AssetID)))
+		}
+		for _, req := range reqs {
+			var activityType model.ActivityType
+			if req.DropOff == p {
+				activityType = model.ActivityTypeDropOff
+				load--
+			} else if req.PickUp == p {
+				activityType = model.ActivityTypePickUp
+				load++
+			} else {
+				continue
+			}
+			activities = append(activities, model.NewActivity(activityType, model.Ref(req.RequestID)))
+		}
+
+		waypoints = append(waypoints, model.Waypoint{
+			Location:   p,
+			Load:       load,
+			Activities: activities,
+		})
+	}
+
+	return waypoints
+}
+
+func getNotAssignedRequest(requests model.Requests) []model.Request {
+	unassigned := make([]model.Request, 0)
+	for i := range requests {
+		ur := requests[i]
+		if ur == nil {
+			continue
+		}
+
+		// Do no copy calculated service times
+		unassigned = append(unassigned, model.Request{
+			RequestID: ur.RequestID,
+			PickUp:    ur.PickUp,
+			DropOff:   ur.DropOff,
+		})
+	}
+
+	return unassigned
+}
+
+func assetsWithMoreCapacityFirst(assets []model.Asset) []model.Asset {
+	sort.SliceStable(assets, func(i, j int) bool {
+		return assets[i].Capacity > assets[j].Capacity
+	})
+
+	return assets
+}
+
+func (a *SequentialConstruction) addRequestStops(ctx context.Context, r model.Route, assetLocation point.Point, req *model.Request, timeFactor float64) model.Route {
 	a.updateRequestServiceTime(ctx, assetLocation, req, timeFactor)
-	r = append(r, &Stop{
-		Name:        fmt.Sprintf("%s PickUp", req.RiderID),
-		RiderID:     &req.RiderID,
+	r = append(r, &model.Stop{
+		Name:        fmt.Sprintf("%s PickUp", req.RequestID),
+		RequestID:   &req.RequestID,
 		Point:       req.PickUp,
 		ServiceTime: req.PickUpServiceTime,
 	})
 
-	r = append(r, &Stop{
-		Name:        fmt.Sprintf("%s DropOff", req.RiderID),
-		RiderID:     &req.RiderID,
+	r = append(r, &model.Stop{
+		Name:        fmt.Sprintf("%s DropOff", req.RequestID),
+		RequestID:   &req.RequestID,
 		Point:       req.DropOff,
 		ServiceTime: req.DropOffServiceTime,
 	})
@@ -142,7 +213,7 @@ func (a *SequentialConstruction) addRequestStops(ctx context.Context, r Route, a
 
 // Based on algorithm 1: The HC routing algorithm.
 // https://www.sciencedirect.com/science/article/pii/S131915781100036X#n0035
-func (a *SequentialConstruction) hillClimbingRoutingAlgorithmV2(ctx context.Context, r Route) (Route, error) {
+func (a *SequentialConstruction) hillClimbingRoutingAlgorithmV2(ctx context.Context, r model.Route, asset model.Asset) (model.Route, error) {
 	l := len(r)
 	cursor := l - 1
 
@@ -167,12 +238,12 @@ func (a *SequentialConstruction) hillClimbingRoutingAlgorithmV2(ctx context.Cont
 			a.logger.Debugf("Comparing ServiceTimes [%s] vs [%s]: (%v, %v)%v", current.Name, neighbor.Name, current.GetServiceTime(), neighbor.GetServiceTime(), current.GetServiceTime() < neighbor.GetServiceTime())
 			if current.GetServiceTime() > neighbor.GetServiceTime() {
 				rPrima := r
-				costR, err := a.cost(ctx, r)
+				costR, err := a.cost(ctx, r, asset)
 				if err != nil {
 					return nil, err
 				}
 				rPrima.Swap(cursor, compareCursor)
-				costRPrima, err := a.cost(ctx, rPrima)
+				costRPrima, err := a.cost(ctx, rPrima, asset)
 				if err != nil {
 					return nil, err
 				}
@@ -200,8 +271,7 @@ func (a *SequentialConstruction) hillClimbingRoutingAlgorithmV2(ctx context.Cont
 //
 // The largest penalty should be imposed on the time window violations, in order to direct the search towards more feasible routes.
 // We used the following weights for the route cost function:w1= 0.201,w2= 0.7 and w3= 0.0992.
-
-func (a *SequentialConstruction) cost(ctx context.Context, r Route) (float64, error) {
+func (a *SequentialConstruction) cost(ctx context.Context, r model.Route, asset model.Asset) (float64, error) {
 	const (
 		W1 float64 = 0.201
 		W2 float64 = 0.7
@@ -215,16 +285,19 @@ func (a *SequentialConstruction) cost(ctx context.Context, r Route) (float64, er
 	}
 
 	twv := countTimeWindowViolations(r, estimation)
-	cv := countCapacityViolations(assetsCapacity, r)
+	cv := countCapacityViolations(int(asset.Capacity), r)
 	return W1*estimation.TotalDuration.Minutes() + W2*float64(twv) + W3*float64(cv), nil
 }
 
 func (a *SequentialConstruction) sortRequestFromDepotToDropOffFarthestFirst(
 	ctx context.Context,
 	depot point.Point,
-	requests []RiderRequest,
-) []RiderRequest {
+	requests model.Requests,
+) model.Requests {
 	sort.SliceStable(requests, func(i, j int) bool {
+		if requests[i] == nil || requests[j] == nil {
+			return false
+		}
 		distanceToI, _ := a.distanceEstimator.EstimateDistance(ctx, depot, requests[i].DropOff)
 		distanceToJ, _ := a.distanceEstimator.EstimateDistance(ctx, depot, requests[j].DropOff)
 
@@ -233,11 +306,11 @@ func (a *SequentialConstruction) sortRequestFromDepotToDropOffFarthestFirst(
 	return requests
 }
 
-func removeFromRoute(r Route, req RiderRequest) Route {
-	var route Route
+func removeFromRoute(r model.Route, req model.Request) model.Route {
+	var route model.Route
 	route = append(route, r[0])
 	for _, stop := range r[1:] {
-		skip := *stop.RiderID == req.RiderID
+		skip := *stop.RequestID == req.RequestID
 		if !skip {
 			route = append(route, stop)
 		}
@@ -245,7 +318,7 @@ func removeFromRoute(r Route, req RiderRequest) Route {
 	return route
 }
 
-func (a *SequentialConstruction) isFeasibleRoute(ctx context.Context, capacity int, r Route) bool {
+func (a *SequentialConstruction) isFeasibleRoute(ctx context.Context, r model.Route, asset model.Asset) bool {
 	// time window constraint violations
 	points := r.GetPoints()
 	for i := range points {
@@ -266,15 +339,15 @@ func (a *SequentialConstruction) isFeasibleRoute(ctx context.Context, capacity i
 
 	//  capacity constraint violations
 	occupied := countAssignedRequests(r)
-	feasible := occupied <= capacity
-	a.logger.Debugf("Is Feasible %b [%d/%d]", feasible, occupied, capacity)
+	feasible := occupied <= int(asset.Capacity)
+	a.logger.Debugf("Is Feasible %b [%d/%d]", feasible, occupied, asset.Capacity)
 	return feasible
 }
 
 func (a *SequentialConstruction) updateRequestServiceTime(
 	ctx context.Context,
 	assetLocation point.Point,
-	request *RiderRequest,
+	request *model.Request,
 	timeFactor float64,
 ) {
 	toPickUp, _ := a.distanceEstimator.EstimateDistance(ctx, assetLocation, request.PickUp)
@@ -289,7 +362,7 @@ func increaseDurationInAFactor(duration time.Duration, factor float64) time.Dura
 	return time.Duration(d)
 }
 
-func countCapacityViolations(capacity int, route Route) int {
+func countCapacityViolations(capacity int, route model.Route) int {
 	reqs := countAssignedRequests(route)
 	if reqs > capacity {
 		return int(math.Abs(float64(reqs - capacity)))
@@ -297,11 +370,11 @@ func countCapacityViolations(capacity int, route Route) int {
 	return 0
 }
 
-func countAssignedRequests(route Route) int {
+func countAssignedRequests(route model.Route) int {
 	return (len(route) - 1) / 2
 }
 
-func countTimeWindowViolations(route Route, estimation *routeestimator.Estimation) int {
+func countTimeWindowViolations(route model.Route, estimation *routeestimator.Estimation) int {
 	twv := 0
 	for _, stop := range route {
 		duration := time.Duration(0)

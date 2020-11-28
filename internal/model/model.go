@@ -1,4 +1,4 @@
-package algorithms
+package model
 
 import (
 	"fmt"
@@ -8,10 +8,9 @@ import (
 )
 
 type Problem struct {
-	DepotLocation point.Point
-	Fleet         []Asset
-	Requests      []RiderRequest
-	Constraints   Constraints
+	Fleet       []Asset
+	Requests    []Request
+	Constraints Constraints
 }
 
 func (p Problem) GetMaxJourneyTimeFactor() float64 {
@@ -20,42 +19,70 @@ func (p Problem) GetMaxJourneyTimeFactor() float64 {
 
 type Asset struct {
 	AssetID  AssetID
-	Location *point.Point
+	Location point.Point
 	Capacity Capacity
 }
 
 type AssetID string
-type Capacity int8
+type Capacity int
 
 type Constraints struct {
 	MaxJourneyTimeFactor float64 // Max multiplier on the direct route. Used to calculate the dropoff time offset
 }
 
 type Solution struct {
-	Metrics SolutionMetrics
-	Routes  []SolutionRoute
+	Metrics    SolutionMetrics
+	Routes     []SolutionRoute
+	Unassigned []Request
 }
 
 type SolutionRoute struct {
-	Route   []point.Point
-	Metrics RouteMetrics
+	Asset     Asset
+	Requests  []Request
+	Waypoints []Waypoint
+	Metrics   RouteMetrics
 }
+
+type Waypoint struct {
+	Location   point.Point
+	Load       Capacity
+	Activities []Activity
+}
+
+type Ref string
+type ActivityType string
+
+type Activity struct {
+	ActivityType ActivityType
+	Ref          Ref
+}
+
+func NewActivity(activityType ActivityType, ref Ref) Activity {
+	return Activity{ActivityType: activityType, Ref: ref}
+}
+
+const (
+	ActivityTypePickUp  ActivityType = "PickUp"
+	ActivityTypeDropOff ActivityType = "DropOff"
+	ActivityTypeStart   ActivityType = "Start"
+)
+
 type RouteMetrics struct {
 	Duration time.Duration
 	Distance float64
 }
 type SolutionMetrics struct {
-	NumAssets  uint16
-	NumRiders  uint16
-	Duration   time.Duration
-	Distance   float64
-	SolvedTime time.Duration
+	NumAssets   int
+	NumRequests int
+	Duration    time.Duration
+	Distance    float64
+	SolvedTime  time.Duration
 }
 
-type Requests []*RiderRequest
+type Requests []*Request
 
-type RiderRequest struct {
-	RiderID            RiderID
+type Request struct {
+	RequestID          RequestID
 	PickUp             point.Point
 	DropOff            point.Point
 	PickUpServiceTime  time.Duration
@@ -80,15 +107,15 @@ func (r Route) GetPoints() []point.Point {
 
 type Stop struct {
 	Name        string
-	RiderID     *RiderID
+	RequestID   *RequestID
 	Point       point.Point
 	ServiceTime time.Duration
 }
 
-type RiderID string
+type RequestID string
 
 func (s Stop) IsDepot() bool {
-	return s.RiderID == nil
+	return s.RequestID == nil
 }
 
 func (s Stop) GetServiceTime() time.Duration {
