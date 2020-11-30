@@ -144,16 +144,18 @@ func buildWaypoints(points []point.Point, reqs []model.Request, asset model.Asse
 		}
 		for _, req := range reqs {
 			var activityType model.ActivityType
+			if req.PickUp == p {
+				activityType = model.ActivityTypePickUp
+				load++
+				activities = append(activities, model.NewActivity(activityType, model.Ref(req.RequestID)))
+			}
+
 			if req.DropOff == p {
 				activityType = model.ActivityTypeDropOff
 				load--
-			} else if req.PickUp == p {
-				activityType = model.ActivityTypePickUp
-				load++
-			} else {
-				continue
+				activities = append(activities, model.NewActivity(activityType, model.Ref(req.RequestID)))
 			}
-			activities = append(activities, model.NewActivity(activityType, model.Ref(req.RequestID)))
+
 		}
 
 		waypoints = append(waypoints, model.Waypoint{
