@@ -2,33 +2,37 @@ package solver
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/edusalguero/roteiro.git/internal/algorithms"
 	"github.com/edusalguero/roteiro.git/internal/model"
 	"github.com/edusalguero/roteiro.git/internal/problem"
 )
 
-type Solver interface {
-	SolveProblem(ctx context.Context, problem problem.Problem) (*problem.Solution, error)
+var ErrInAlgo = fmt.Errorf("error processing solve algorithm")
+
+//go:generate mockgen -source=./service.go -destination=./mock/service.go
+type Service interface {
+	SolveProblem(ctx context.Context, p problem.Problem) (*problem.Solution, error)
 }
 
-type Service struct {
+type Solver struct {
 	algo algorithms.Algorithm
 }
 
-func NewService(algo algorithms.Algorithm) *Service {
-	return &Service{algo: algo}
+func NewSolver(algo algorithms.Algorithm) *Solver {
+	return &Solver{algo: algo}
 }
 
-func (s *Service) SolveProblem(ctx context.Context, p problem.Problem) (*problem.Solution, error) {
+func (s *Solver) SolveProblem(ctx context.Context, p problem.Problem) (*problem.Solution, error) {
 	algoProblem := NewAlgoProblemFromSolverProblem(p)
 	sol, err := s.algo.Solve(ctx, algoProblem)
 
 	if err != nil {
-		return nil, err
+		return nil, ErrInAlgo
 	}
 	return &problem.Solution{
-		ID:       p.ID.String(),
+		ID:       p.ID,
 		Solution: *sol,
 	}, nil
 }

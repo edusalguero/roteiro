@@ -6,6 +6,7 @@ import (
 	"github.com/edusalguero/roteiro.git/internal/model"
 	"github.com/edusalguero/roteiro.git/internal/point"
 	"github.com/edusalguero/roteiro.git/internal/problem"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -45,7 +46,7 @@ func TestService_Render(t *testing.T) {
 		DropOff:   sadaLoc,
 	}
 	solution := problem.Solution{
-		ID: "one id",
+		ID: uuid.New(),
 		Solution: model.Solution{
 			Metrics: model.SolutionMetrics{
 				NumAssets:   2,

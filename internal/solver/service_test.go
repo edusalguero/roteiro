@@ -71,7 +71,7 @@ func Test_service_SolveProblem(t *testing.T) {
 
 	const SolvedTime = 1182235
 	solution := problem.Solution{
-		ID: p.ID.String(),
+		ID: p.ID,
 		Solution: model.Solution{
 			Metrics: model.SolutionMetrics{
 				NumAssets:   2,
@@ -208,7 +208,7 @@ func Test_service_SolveProblem(t *testing.T) {
 	e := distanceestimator.NewHaversineDistanceEstimator(80)
 	routeE := routeestimator.NewEstimator(e)
 	algo := algorithms.NewSequentialConstruction(log, routeE, e)
-	s := NewService(algo)
+	s := NewSolver(algo)
 
 	t.Run("Solve problem", func(t *testing.T) {
 		got, err := s.SolveProblem(context.Background(), *p)
