@@ -4,9 +4,16 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/edusalguero/roteiro.git/internal/config"
 	"github.com/sirupsen/logrus"
 )
+
+var (
+	DefaultLogger Logger = NewLogger()
+)
+
+type Config struct {
+	Level string `default:"debug"`
+}
 
 //go:generate mockgen -source=./logger.go -destination=./mock/logger.go
 type Logger interface {
@@ -17,12 +24,18 @@ type Logger interface {
 	Errorf(string, ...interface{})
 	Fatalf(string, ...interface{})
 	Panicf(string, ...interface{})
+	Criticalf(string, ...interface{})
 
 	WithField(string, interface{}) Logger
 	WithFields(map[string]interface{}) Logger
 }
 
-func New(cnf config.Logger) (Logger, error) {
+func NewLogger() Logger {
+	logger, _ := New(Config{Level: "info"})
+
+	return logger
+}
+func New(cnf Config) (Logger, error) {
 	lvl, err := logrus.ParseLevel(cnf.Level)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse level")

@@ -1,20 +1,17 @@
 package config
 
 import (
+	"github.com/edusalguero/roteiro.git/internal/logger"
 	httpwrapper "github.com/edusalguero/roteiro.git/internal/utils/httpserver"
 	"github.com/edusalguero/roteiro.git/internal/utils/shutdown"
 	"github.com/kelseyhightower/envconfig"
 )
 
 type Config struct {
-	Log               Logger
+	Log               logger.Config
 	Shutdown          shutdown.Config
 	DistanceEstimator DistanceEstimator
 	Server            httpwrapper.Config
-}
-
-type Logger struct {
-	Level string `default:"debug"`
 }
 
 type DistanceEstimator struct {

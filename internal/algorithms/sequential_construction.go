@@ -155,7 +155,6 @@ func buildWaypoints(points []point.Point, reqs []model.Request, asset model.Asse
 				load--
 				activities = append(activities, model.NewActivity(activityType, model.Ref(req.RequestID)))
 			}
-
 		}
 
 		waypoints = append(waypoints, model.Waypoint{

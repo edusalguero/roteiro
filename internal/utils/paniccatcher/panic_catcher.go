@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"strings"
 
-	log "github.com/cabify/go-logging"
+	"github.com/edusalguero/roteiro.git/internal/logger"
 	"github.com/google/uuid"
 )
 
@@ -36,23 +36,6 @@ func Reporter() {
 	}
 }
 
-// CatcherWithContext defers Default.CatcherWithContext and repanics.
-//
-// See Interface.CatcherWithContext.
-func CatcherWithContext(contextData func() string, afterRecovery func()) {
-	defer Default.CatcherWithContext(contextData, afterRecovery)
-	if r := recover(); r != nil {
-		panic(r)
-	}
-}
-
-// LogWithContext calls Default.LogWithContext.
-//
-// See Interface.LogWithContext.
-func LogWithContext(err interface{}, context string) {
-	Default.LogWithContext(err, context)
-}
-
 // Interface is the interface that this package exposes.
 type Interface interface {
 	// Catcher can be deferred in any place in order to recover gracefully from a panic, logging it in our logging systems
@@ -74,29 +57,19 @@ type Interface interface {
 var Default Interface
 
 func init() {
-	Default = With(log.DefaultLogger)
+	Default = With(logger.DefaultLogger)
 }
 
 // Logger is the subset of log.Logger that this package may depend on.
 type Logger interface {
-	Critical(args ...interface{})
-	Criticalf(format string, args ...interface{})
-	Criticalln(args ...interface{})
-	Error(args ...interface{})
-	Errorf(format string, args ...interface{})
-	Errorln(args ...interface{})
-	Warning(args ...interface{})
-	Warningf(format string, args ...interface{})
-	Warningln(args ...interface{})
-	Notice(args ...interface{})
-	Noticef(format string, args ...interface{})
-	Noticeln(args ...interface{})
-	Info(args ...interface{})
-	Infof(format string, args ...interface{})
-	Infoln(args ...interface{})
-	Debug(args ...interface{})
-	Debugf(format string, args ...interface{})
-	Debugln(args ...interface{})
+	Info(...interface{})
+
+	Debugf(string, ...interface{})
+	Infof(string, ...interface{})
+	Errorf(string, ...interface{})
+	Fatalf(string, ...interface{})
+	Panicf(string, ...interface{})
+	Criticalf(string, ...interface{})
 }
 
 // With returns an Interface that uses the provided Logger to log things on panics.
@@ -141,7 +114,7 @@ func (p withLogger) LogWithContext(err interface{}, context string) {
 	if context != "" {
 		errorMsg += "\n" + context
 	}
-	p.log.Critical(addPanicIDScope(panicID, fmt.Sprintf("%s\n%s", errString, errorMsg)))
+	p.log.Criticalf(addPanicIDScope(panicID, fmt.Sprintf("%s\n%s", errString, errorMsg)))
 
 	if PanicReporter != nil {
 		PanicReporter(panicID, stackTrace, errString, context)

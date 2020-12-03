@@ -29,6 +29,9 @@ func (l *logrusadapter) Fatalf(format string, args ...interface{}) {
 func (l *logrusadapter) Panicf(format string, args ...interface{}) {
 	l.entry.Panicf(format, args...)
 }
+func (l *logrusadapter) Criticalf(format string, args ...interface{}) {
+	l.entry.Errorf(format, args...)
+}
 
 func (l *logrusadapter) WithField(key string, value interface{}) Logger {
 	return &logrusadapter{l.entry.WithField(key, value)}
