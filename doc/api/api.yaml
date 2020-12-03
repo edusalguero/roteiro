@@ -1,0 +1,167 @@
+openapi: 3.0.0
+
+info:
+  version: v1
+  title: Roteiro API
+
+servers:
+  - url: 'http://localhost:8080/api/v1/'
+
+paths:
+  '/problem':
+    post:
+      summary: "Solve a problem with the given description"
+      operationId: problemPost
+      description: "Send a problem to be solved"
+      tags:
+        - Solver
+      requestBody:
+        description: The problem
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProblemRequest"
+      responses:
+        200:
+          description: "Success"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SolutionResponse"
+        400:
+          description: "Error"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: "The error message"
+    ProblemRequest:
+      type: object
+      properties:
+        assets:
+          type: array
+          items:
+            $ref: "#/components/schemas/Asset"
+        requests:
+          type: array
+          items:
+            $ref: '#/components/schemas/Request'
+        constraints:
+          type: object
+          properties:
+            max_journey_time_factor:
+              type: number
+              format: float
+    SolutionResponse:
+      type: object
+      properties:
+        problem_id:
+          type: string
+        metrics:
+          type: object
+          properties:
+            num_assets:
+              type: integer
+              format: int32
+            num_requests:
+              type: integer
+              format: int32
+            duration:
+              type: integer
+              format: int32
+              description: "Duration of the complete solution in nanoseconds"
+            distance:
+              type: integer
+              format: int32
+              description: "Distance in meters"
+            solved_time:
+              type: integer
+              format: int32
+              description: "Time to solve the problem in nanoseconds"
+        routes:
+          type: array
+          items:
+            type: object
+            properties:
+              asset:
+                $ref: '#/components/schemas/Asset'
+              requests:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Request'
+              waypoints:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Waypoint'
+              metrics:
+                type: object
+                properties:
+                  duration:
+                    type: integer
+                    format: int32
+                  distance:
+                    type: integer
+                    format: int32
+        unassigned:
+          type: array
+          items:
+            $ref: '#/components/schemas/Request'
+
+    Asset:
+      type: object
+      properties:
+        asset_id:
+          type: string
+        location:
+          $ref: '#/components/schemas/Point'
+        capacity:
+          type: integer
+          format: int32
+    Request:
+      type: object
+      properties:
+        requester_id:
+          type: string
+        pick_up:
+          $ref: '#/components/schemas/Point'
+        drop_off:
+          $ref: '#/components/schemas/Point'
+    Point:
+      type: object
+      properties:
+        lat:
+          type: number
+          format: float
+        lon:
+          type: number
+          format: float
+    Waypoint:
+      type: object
+      properties:
+        location:
+          $ref: '#/components/schemas/Point'
+        load:
+          type: integer
+          format: int32
+        activities:
+          type: array
+          items:
+            type: object
+            properties:
+              activity_type:
+                type: string
+              ref:
+                type: string
+
+
+
+
+
