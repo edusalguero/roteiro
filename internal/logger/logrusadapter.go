@@ -18,6 +18,10 @@ func (l *logrusadapter) Infof(format string, args ...interface{}) {
 	l.entry.Infof(format, args...)
 }
 
+func (l *logrusadapter) Errorf(format string, args ...interface{}) {
+	l.entry.Errorf(format, args...)
+}
+
 func (l *logrusadapter) Fatalf(format string, args ...interface{}) {
 	l.entry.Fatalf(format, args...)
 }

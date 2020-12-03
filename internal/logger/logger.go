@@ -14,6 +14,7 @@ type Logger interface {
 
 	Debugf(string, ...interface{})
 	Infof(string, ...interface{})
+	Errorf(string, ...interface{})
 	Fatalf(string, ...interface{})
 	Panicf(string, ...interface{})
 
