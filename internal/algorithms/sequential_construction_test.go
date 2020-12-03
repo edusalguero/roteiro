@@ -574,4 +574,42 @@ func Test_buildWaypoints(t *testing.T) {
 		got := buildWaypoints(points, reqs, asset)
 		assert.Equal(t, waypoints, got)
 	})
+
+	t.Run("Build Waypoints same pickup and dropoff", func(t *testing.T) {
+		asset := model.Asset{
+			AssetID:  "Asset",
+			Location: pontedeumeLoc,
+			Capacity: 4,
+		}
+		reqs := []model.Request{
+			{
+				RequestID: "1",
+				PickUp:    pontedeumeLoc,
+				DropOff:   pontedeumeLoc,
+			},
+			{
+				RequestID: "2",
+				PickUp:    pontedeumeLoc,
+				DropOff:   pontedeumeLoc,
+			},
+		}
+
+		points := []point.Point{pontedeumeLoc}
+
+		waypoints := []model.Waypoint{
+			{
+				Location: pontedeumeLoc,
+				Load:     0,
+				Activities: []model.Activity{
+					model.NewActivity(model.ActivityTypeStart, "Asset"),
+					model.NewActivity(model.ActivityTypePickUp, "1"),
+					model.NewActivity(model.ActivityTypeDropOff, "1"),
+					model.NewActivity(model.ActivityTypePickUp, "2"),
+					model.NewActivity(model.ActivityTypeDropOff, "2"),
+				},
+			},
+		}
+		got := buildWaypoints(points, reqs, asset)
+		assert.Equal(t, waypoints, got)
+	})
 }

@@ -1,0 +1,28 @@
+{
+  "assets": [
+    {
+      "asset_id": "asset ID",
+      "location": {
+        "lat": 52.52568,
+        "lon": 13.45345
+      },
+      "capacity": 1
+    }
+  ],
+  "requests": [
+    {
+      "requester_id": "requester ID",
+      "pick_up": {
+        "lat": 52.52568,
+        "lon": 13.45345
+      },
+      "drop_off": {
+        "lat": 52.52568,
+        "lon": 13.45345
+      }
+    }
+  ],
+  "constraints": {
+    "max_journey_time_factor": 1.5
+  }
+}

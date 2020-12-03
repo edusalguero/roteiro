@@ -15,7 +15,7 @@ type GoogleMapsDistanceEstimator struct {
 	cache  map[string]RouteEstimation
 }
 
-func NewGoogleMapsDistanceEstimator(apiKey string, l logger.Logger) (*GoogleMapsDistanceEstimator, error) {
+func NewGoogleMapsDistanceEstimator(apiKey string, l logger.Logger) (Service, error) {
 	c, err := maps.NewClient(maps.WithAPIKey(apiKey))
 	if err != nil {
 		return nil, err

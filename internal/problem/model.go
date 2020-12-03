@@ -8,6 +8,13 @@ import (
 	"github.com/google/uuid"
 )
 
+type Problem struct {
+	ID          uuid.UUID
+	Fleet       []Asset
+	Requests    []Request
+	Constraints Constraints
+}
+
 type Asset struct {
 	AssetID  AssetID
 	Location point.Point
@@ -27,23 +34,15 @@ type Request struct {
 
 type RequestID string
 
-type Problem struct {
-	ID          uuid.UUID
-	Fleet       []Asset
-	Requests    []Request
-	Constraints Constraints
-}
-
-func NewProblem(id uuid.UUID, fleet []Asset, requests []Request, constraints Constraints) *Problem {
-	return &Problem{ID: id, Fleet: fleet, Requests: requests, Constraints: constraints}
-
-}
-
 type Constraints struct {
 	MaxJourneyTimeFactor float64 // Max multiplier on the direct route. Used to calculate the dropoff time offset
 }
 
 type Solution struct {
-	ID string
+	ID uuid.UUID
 	model.Solution
+}
+
+func NewProblem(id uuid.UUID, fleet []Asset, requests []Request, constraints Constraints) *Problem {
+	return &Problem{ID: id, Fleet: fleet, Requests: requests, Constraints: constraints}
 }

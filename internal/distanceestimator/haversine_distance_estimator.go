@@ -12,7 +12,7 @@ type HaversineDistanceEstimator struct {
 	Velocity float64 // km per h
 }
 
-func NewHaversineDistanceEstimator(velocity float64) *HaversineDistanceEstimator {
+func NewHaversineDistanceEstimator(velocity float64) Service {
 	return &HaversineDistanceEstimator{Velocity: velocity}
 }
 
