@@ -119,11 +119,12 @@ func (a *SequentialConstruction) Solve(ctx context.Context, p model.Problem) (*m
 	algoDuration := time.Since(algoStart)
 	s := model.Solution{
 		Metrics: model.SolutionMetrics{
-			NumAssets:   usedAssets,
-			NumRequests: insertedRequests,
-			Duration:    totalDuration,
-			Distance:    totalDistance,
-			SolvedTime:  algoDuration,
+			NumAssets:     usedAssets,
+			NumRequests:   insertedRequests,
+			NumUnassigned: len(unassigned),
+			Duration:      totalDuration,
+			Distance:      totalDistance,
+			SolvedTime:    algoDuration,
 		},
 		Routes:     solutionRoutes,
 		Unassigned: unassigned,
@@ -168,7 +169,7 @@ func buildWaypoints(points []point.Point, reqs []model.Request, asset model.Asse
 }
 
 func getNotAssignedRequest(requests model.Requests) []model.Request {
-	unassigned := make([]model.Request, 0)
+	var unassigned []model.Request
 	for i := range requests {
 		ur := requests[i]
 		if ur == nil {

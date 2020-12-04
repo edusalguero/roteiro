@@ -64,11 +64,12 @@ func TestSolverController_solveProblem(t *testing.T) {
 						ID: uuid.MustParse("83437db4-3e3b-4167-bb7b-74178b6586fd"),
 						Solution: model.Solution{
 							Metrics: model.SolutionMetrics{
-								NumAssets:   1,
-								NumRequests: 1,
-								Duration:    0,
-								Distance:    0,
-								SolvedTime:  161939,
+								NumAssets:     1,
+								NumRequests:   1,
+								NumUnassigned: 0,
+								Duration:      0,
+								Distance:      0,
+								SolvedTime:    161939,
 							},
 							Routes: []model.SolutionRoute{
 								{
