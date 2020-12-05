@@ -57,13 +57,15 @@ jobs:
           go-version: 1.15.x
       - name: Checkout code
         uses: actions/checkout@v2
+      - name: Installing dependencies
+        run: go mod vendor
       - name: Calc coverage
-        run: |
-          go test -v -covermode=count -coverprofile=coverage.out
-      - name: Convert coverage.out to coverage.lcov
-        uses: jandelgado/gcov2lcov-action@v1.0.6
-      - name: Coveralls
-        uses: coverallsapp/github-action@v1.1.2
-        with:
-          github-token: ${{ secrets.github_token }}
-          path-to-lcov: coverage.lcov
+        env:
+          ROTEIRO_DISTANCEESTIMATOR_GOOGLEMAPS_ENABLED: false
+          ROTEIRO_DISTANCEESTIMATOR_GOOGLEMAPS_APIKEY: ${{ secrets.ROTEIRO_DISTANCEESTIMATOR_GOOGLEMAPS_APIKEY }}
+          ROTEIRO_SERVER_PORT: 8080
+          ROTEIRO_SERVER_MODE: debug
+          ROTEIRO_LOG_LEVEL: info
+        run: go test -mod=vendor -covermode=count -coverprofile=coverage.txt -covermode=atomic ./...
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v1
