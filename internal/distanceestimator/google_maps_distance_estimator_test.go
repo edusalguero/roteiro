@@ -2,6 +2,7 @@ package distanceestimator
 
 import (
 	"context"
+	"math"
 	"testing"
 
 	"github.com/edusalguero/roteiro.git/internal/config"
@@ -47,7 +48,13 @@ func TestGoogleMapsDistanceEstimator_EstimateRouteDistances(t *testing.T) {
 				return
 			}
 			assert.NoError(t, err)
-			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.want.From, got.From)
+			assert.Equal(t, tt.want.To, got.To)
+			assert.Equal(t, tt.want.Distance, got.Distance)
+			// This is a Padron pepper test.
+			// Depending on the time of day the test passes or not because the time estimate changes a few seconds...
+			// Rounding off the minutes we ensure that the test passes.
+			assert.Equal(t, math.RoundToEven(tt.want.Duration.Minutes()), math.RoundToEven(got.Duration.Minutes()))
 		})
 	}
 }
