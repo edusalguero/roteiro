@@ -36,8 +36,16 @@ jobs:
           go-version: ${{ matrix.go-version }}
       - name: Checkout code
         uses: actions/checkout@v2
+      - name: Installing dependencies
+        run: go mod vendor
       - name: Run tests
-        run: go test -mod=vendor -tags=integration -race -coverprofile=.test_coverage.txt -p 1 ./...
+        env:
+          ROTEIRO_DISTANCEESTIMATOR_GOOGLEMAPS_ENABLED: false
+          ROTEIRO_DISTANCEESTIMATOR_GOOGLEMAPS_APIKEY: ${{ secrets.ROTEIRO_DISTANCEESTIMATOR_GOOGLEMAPS_APIKEY }}
+          ROTEIRO_SERVER_PORT: 8080
+          ROTEIRO_SERVER_MODE: debug
+          ROTEIRO_LOG_LEVEL: info
+        run: go test -mod=vendor -tags=integration -race -p 1 ./...
 
   coverage:
     runs-on: ubuntu-latest
