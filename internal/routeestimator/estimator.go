@@ -16,7 +16,6 @@ func NewEstimator(de distanceestimator.Service) Estimator {
 	return Estimator{de: de}
 }
 func (e Estimator) GetRouteEstimation(ctx context.Context, points []point.Point) (*Estimation, error) {
-
 	l := len(points)
 	tDistance := 0.0
 	tDuration := time.Duration(0)
@@ -37,7 +36,6 @@ func (e Estimator) GetRouteEstimation(ctx context.Context, points []point.Point)
 		})
 		tDistance += re.Distance
 		tDuration += re.Duration
-
 	}
 
 	return &Estimation{

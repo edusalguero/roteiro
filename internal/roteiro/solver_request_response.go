@@ -44,11 +44,12 @@ type problemResponse struct {
 }
 
 type metrics struct {
-	NumAssets   int           `json:"num_assets"`
-	NumRequests int           `json:"num_requests"`
-	Duration    time.Duration `json:"duration"`
-	Distance    float64       `json:"distance"`
-	SolvedTime  time.Duration `json:"solved_time"`
+	NumAssets     int           `json:"num_assets"`
+	NumRequests   int           `json:"num_requests"`
+	NumUnassigned int           `json:"num_unassigned"`
+	Duration      time.Duration `json:"duration"`
+	Distance      float64       `json:"distance"`
+	SolvedTime    time.Duration `json:"solved_time"`
 }
 
 type route struct {
@@ -70,6 +71,7 @@ type waypoint struct {
 }
 
 type routeMetrics struct {
+	Requests int           `json:"requests"`
 	Duration time.Duration `json:"duration"`
 	Distance float64       `json:"distance"`
 }
@@ -102,31 +104,33 @@ func newSolutionResponseFromSol(solution *problem.Solution) problemResponse {
 			}
 		}
 		ro := route{
-			Asset:     newResponseAssetFromSolutionRoute(r.Asset),
-			Requests:  reqs,
-			Waypoints: waypoints,
+			Asset: newResponseAssetFromSolutionRoute(r.Asset),
 			Metrics: routeMetrics{
+				Requests: len(reqs),
 				Duration: r.Metrics.Duration,
 				Distance: r.Metrics.Distance,
 			},
+			Requests:  reqs,
+			Waypoints: waypoints,
 		}
 
 		routes[i] = ro
 	}
 
 	unassignedReqs := make([]request, len(solution.Unassigned))
-	for _, req := range solution.Unassigned {
-		unassignedReqs = append(unassignedReqs, newResponseRequestFromModelRequest(req))
+	for i, req := range solution.Unassigned {
+		unassignedReqs[i] = newResponseRequestFromModelRequest(req)
 	}
 
 	return problemResponse{
 		ProblemID: solution.ID.String(),
 		Metrics: metrics{
-			NumAssets:   solution.Metrics.NumAssets,
-			NumRequests: solution.Metrics.NumRequests,
-			Duration:    solution.Metrics.Duration,
-			Distance:    solution.Metrics.Distance,
-			SolvedTime:  solution.Metrics.SolvedTime,
+			NumAssets:     solution.Metrics.NumAssets,
+			NumRequests:   solution.Metrics.NumRequests,
+			NumUnassigned: solution.Metrics.NumUnassigned,
+			Duration:      solution.Metrics.Duration,
+			Distance:      solution.Metrics.Distance,
+			SolvedTime:    solution.Metrics.SolvedTime,
 		},
 		Routes:     routes,
 		Unassigned: unassignedReqs,

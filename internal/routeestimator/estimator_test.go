@@ -10,7 +10,6 @@ import (
 )
 
 func TestEstimator_GetRouteEstimation(t *testing.T) {
-
 	tests := []struct {
 		name    string
 		points  []point.Point

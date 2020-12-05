@@ -3,6 +3,7 @@
   "metrics": {
     "num_assets": 1,
     "num_requests": 1,
+    "num_unassigned": 0,
     "duration": 0,
     "distance": 0,
     "solved_time": 161939
@@ -16,6 +17,11 @@
           "lon": 13.45345
         },
         "capacity": 1
+      },
+      "metrics": {
+        "requests": 1,
+        "duration": 0,
+        "distance": 0
       },
       "requests": [
         {
@@ -52,11 +58,7 @@
             }
           ]
         }
-      ],
-      "metrics": {
-        "duration": 0,
-        "distance": 0
-      }
+      ]
     }
   ],
   "unassigned": []

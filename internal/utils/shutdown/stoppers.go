@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"gitlab.otters.xyz/product/match/library/gox.git"
+	"github.com/edusalguero/roteiro.git/internal/utils/gox"
 )
 
 // Stopper defines a dependency that can perform graceful shutdown
@@ -33,9 +33,7 @@ func (p *phase) AfterStarting(ss StartStopper) {
 	ctx, cancel := context.WithTimeout(context.Background(), startTimeout)
 	defer cancel()
 
-	err := gox.CallWithContext(ctx, func() error {
-		return ss.Start()
-	})
+	err := gox.CallWithContext(ctx, ss.Start)
 	if err != nil {
 		if err == context.DeadlineExceeded {
 			err = fmt.Errorf("component %T did not start in the allocated time (%s)", ss, startTimeout)
