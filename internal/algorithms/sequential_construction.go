@@ -169,7 +169,7 @@ func buildWaypoints(points []point.Point, reqs []model.Request, asset model.Asse
 }
 
 func getNotAssignedRequest(requests model.Requests) []model.Request {
-	var unassigned []model.Request
+	var unassigned = make([]model.Request, 0)
 	for i := range requests {
 		ur := requests[i]
 		if ur == nil {

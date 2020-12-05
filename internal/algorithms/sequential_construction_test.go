@@ -88,6 +88,58 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 			false,
 		},
 		{
+			"With unassigned requests",
+			model.Problem{
+				Fleet: []model.Asset{
+					{
+						AssetID:  "Miño Asset",
+						Location: minoLoc,
+						Capacity: 2,
+					},
+				},
+				Requests: []model.Request{
+					{
+						RequestID: "As Pontes 1",
+						PickUp:    aspontesLoc,
+						DropOff:   sadaLoc,
+					},
+					{
+						RequestID: "As Pontes 2",
+						PickUp:    aspontesLoc,
+						DropOff:   sadaLoc,
+					},
+					{
+						RequestID: "As Pontes 3",
+						PickUp:    aspontesLoc,
+						DropOff:   sadaLoc,
+					},
+					{
+						RequestID: "As Pontes 4",
+						PickUp:    aspontesLoc,
+						DropOff:   sadaLoc,
+					},
+				},
+				Constraints: model.Constraints{
+					MaxJourneyTimeFactor: 1.5,
+				},
+			},
+			[]Route{[]point.Point{minoLoc, aspontesLoc, sadaLoc}},
+			[]model.Request{
+				{
+					RequestID: "As Pontes 3",
+					PickUp:    aspontesLoc,
+					DropOff:   sadaLoc,
+				},
+				{
+					RequestID: "As Pontes 4",
+					PickUp:    aspontesLoc,
+					DropOff:   sadaLoc,
+				},
+			},
+			false,
+			false,
+		},
+		{
 			"Different assets, same pickup and same dropoff",
 			model.Problem{
 				Fleet: []model.Asset{
