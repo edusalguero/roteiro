@@ -5,10 +5,12 @@ import (
 	"testing"
 
 	"github.com/edusalguero/roteiro.git/internal/distanceestimator"
+	mock_distanceestimator "github.com/edusalguero/roteiro.git/internal/distanceestimator/mock"
 	"github.com/edusalguero/roteiro.git/internal/logger"
 	"github.com/edusalguero/roteiro.git/internal/model"
 	"github.com/edusalguero/roteiro.git/internal/point"
 	"github.com/edusalguero/roteiro.git/internal/problem"
+	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
@@ -210,5 +212,45 @@ func Test_service_SolveProblem(t *testing.T) {
 		assert.NotNil(t, got)
 		got.Metrics.SolvedTime = SolvedTime
 		assert.Equal(t, solution, *got)
+	})
+}
+
+func Test_service_SolveProblem_WithErrorBuildingMatrix(t *testing.T) {
+	var aspontesLoc = point.NewPoint(43.450218, -7.853109)
+	var sadaLoc = point.NewPoint(43.347306, -8.276904)
+
+	aspontesAsset := problem.Asset{
+		AssetID:  "As Pontes Asset",
+		Location: aspontesLoc,
+		Capacity: 2,
+	}
+	req1 := problem.Request{
+		RequestID: "As Pontes 1",
+		PickUp:    aspontesLoc,
+		DropOff:   sadaLoc,
+	}
+
+	p := problem.NewProblem(
+		uuid.New(),
+		[]problem.Asset{
+			aspontesAsset,
+		},
+		[]problem.Request{
+			req1,
+		},
+		problem.Constraints{
+			MaxJourneyTimeFactor: 1.5,
+		})
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	distanceEstimatorMock := mock_distanceestimator.NewMockService(ctrl)
+	distanceEstimatorMock.EXPECT().GetCost(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, ErrBuildingDistanceMatrix)
+	s := NewSolver(distanceEstimatorMock, logger.NewNopLogger())
+
+	t.Run("Solve problem", func(t *testing.T) {
+		got, err := s.SolveProblem(context.Background(), *p)
+		assert.Error(t, err, ErrBuildingDistanceMatrix)
+		assert.Nil(t, got)
 	})
 }
