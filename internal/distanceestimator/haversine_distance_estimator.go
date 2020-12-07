@@ -5,6 +5,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/edusalguero/roteiro.git/internal/cost"
 	"github.com/edusalguero/roteiro.git/internal/point"
 )
 
@@ -23,7 +24,7 @@ func degreesToRadians(d float64) float64 {
 
 // Distance calculates the shortest path between two coordinates on the surface
 // of the Earth. This function returns the distance in meters.
-func (e *HaversineDistanceEstimator) EstimateDistance(_ context.Context, from, to point.Point) (*RouteEstimation, error) {
+func (e *HaversineDistanceEstimator) GetCost(_ context.Context, from, to point.Point) (*cost.Cost, error) {
 	const earthRadiusKm = 6371 // radius of the earth in kilometers.
 	lat1 := degreesToRadians(from.Lat())
 	lon1 := degreesToRadians(from.Lon())
@@ -41,9 +42,7 @@ func (e *HaversineDistanceEstimator) EstimateDistance(_ context.Context, from, t
 	km := c * earthRadiusKm
 	meters := math.Round(km * 1000)
 	duration := time.Duration(km / e.Velocity * float64(time.Hour))
-	return &RouteEstimation{
-		From:     from,
-		To:       to,
+	return &cost.Cost{
 		Distance: meters,
 		Duration: duration,
 	}, nil

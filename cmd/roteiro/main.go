@@ -1,12 +1,10 @@
 package main
 
 import (
-	"github.com/edusalguero/roteiro.git/internal/algorithms"
 	"github.com/edusalguero/roteiro.git/internal/config"
 	"github.com/edusalguero/roteiro.git/internal/distanceestimator"
 	"github.com/edusalguero/roteiro.git/internal/logger"
 	"github.com/edusalguero/roteiro.git/internal/roteiro"
-	"github.com/edusalguero/roteiro.git/internal/routeestimator"
 	"github.com/edusalguero/roteiro.git/internal/solver"
 	httpwrapper "github.com/edusalguero/roteiro.git/internal/utils/httpserver"
 	"github.com/edusalguero/roteiro.git/internal/utils/shutdown"
@@ -35,10 +33,7 @@ func main() {
 		}
 	}
 
-	routeE := routeestimator.NewEstimator(e)
-	algo := algorithms.NewSequentialConstruction(log, routeE, e)
-	solverService := solver.NewSolver(algo)
-
+	solverService := solver.NewSolver(e, log)
 	httpServerWrapper := httpwrapper.NewHTTPServerWrapper(cnf.Server)
 	httpServerWrapper.AddController(roteiro.NewStatusController())
 	httpServerWrapper.AddController(roteiro.NewSolverController(solverService, log, roteiro.IDGenerator))

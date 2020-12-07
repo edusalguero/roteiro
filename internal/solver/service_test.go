@@ -4,20 +4,16 @@ import (
 	"context"
 	"testing"
 
-	"github.com/edusalguero/roteiro.git/internal/algorithms"
 	"github.com/edusalguero/roteiro.git/internal/distanceestimator"
 	"github.com/edusalguero/roteiro.git/internal/logger"
 	"github.com/edusalguero/roteiro.git/internal/model"
 	"github.com/edusalguero/roteiro.git/internal/point"
 	"github.com/edusalguero/roteiro.git/internal/problem"
-	"github.com/edusalguero/roteiro.git/internal/routeestimator"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
 func Test_service_SolveProblem(t *testing.T) {
-	log := logger.NewNopLogger()
-
 	var minoLoc = point.NewPoint(43.3475, -8.206389)
 	var aspontesLoc = point.NewPoint(43.450218, -7.853109)
 	var sadaLoc = point.NewPoint(43.347306, -8.276904)
@@ -206,9 +202,7 @@ func Test_service_SolveProblem(t *testing.T) {
 		},
 	}
 	e := distanceestimator.NewHaversineDistanceEstimator(80)
-	routeE := routeestimator.NewEstimator(e)
-	algo := algorithms.NewSequentialConstruction(log, routeE, e)
-	s := NewSolver(algo)
+	s := NewSolver(e, logger.NewNopLogger())
 
 	t.Run("Solve problem", func(t *testing.T) {
 		got, err := s.SolveProblem(context.Background(), *p)

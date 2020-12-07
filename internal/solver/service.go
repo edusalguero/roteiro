@@ -5,10 +5,15 @@ import (
 	"fmt"
 
 	"github.com/edusalguero/roteiro.git/internal/algorithms"
+	"github.com/edusalguero/roteiro.git/internal/costmatrix"
+	"github.com/edusalguero/roteiro.git/internal/distanceestimator"
+	"github.com/edusalguero/roteiro.git/internal/logger"
 	"github.com/edusalguero/roteiro.git/internal/model"
 	"github.com/edusalguero/roteiro.git/internal/problem"
+	"github.com/edusalguero/roteiro.git/internal/routeestimator"
 )
 
+var ErrBuildingDistanceMatrix = fmt.Errorf("error building distance matrix")
 var ErrInAlgo = fmt.Errorf("error processing solve algorithm")
 
 //go:generate mockgen -source=./service.go -destination=./mock/service.go
@@ -17,16 +22,28 @@ type Service interface {
 }
 
 type Solver struct {
-	algo algorithms.Algorithm
+	distanceEstimator distanceestimator.Service
+	logger            logger.Logger
 }
 
-func NewSolver(algo algorithms.Algorithm) *Solver {
-	return &Solver{algo: algo}
+func NewSolver(d distanceestimator.Service, log logger.Logger) *Solver {
+	return &Solver{distanceEstimator: d, logger: log}
 }
 
 func (s *Solver) SolveProblem(ctx context.Context, p problem.Problem) (*problem.Solution, error) {
+	matrix, err := costmatrix.NewDistanceMatrixBuilder(s.distanceEstimator).
+		WithAssets(p.Fleet).
+		WithRequests(p.Requests).
+		Build(ctx)
+	if err != nil {
+		return nil, ErrBuildingDistanceMatrix
+	}
+
+	routeE := routeestimator.NewEstimator(matrix)
+	algo := algorithms.NewSequentialConstruction(s.logger, routeE, matrix)
+
 	algoProblem := NewAlgoProblemFromSolverProblem(p)
-	sol, err := s.algo.Solve(ctx, algoProblem)
+	sol, err := algo.Solve(ctx, algoProblem)
 
 	if err != nil {
 		return nil, ErrInAlgo
