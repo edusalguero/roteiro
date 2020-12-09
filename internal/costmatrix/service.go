@@ -3,14 +3,17 @@ package costmatrix
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/edusalguero/roteiro.git/internal/cost"
 	"github.com/edusalguero/roteiro.git/internal/distanceestimator"
+	"github.com/edusalguero/roteiro.git/internal/logger"
 	"github.com/edusalguero/roteiro.git/internal/point"
 	"github.com/edusalguero/roteiro.git/internal/problem"
 )
 
 var ErrPointOutOfMatrix = fmt.Errorf("point out of matrix")
+var ErrBuildingMatrix = fmt.Errorf("error building matrix")
 
 type Service interface {
 	GetCost(ctx context.Context, from point.Point, to point.Point) (*cost.Cost, error)
@@ -20,106 +23,83 @@ type DistanceMatrix struct {
 	distanceEstimator distanceestimator.Service
 	assets            []problem.Asset
 	requests          []problem.Request
-	matrix            map[point.Point]map[point.Point]*cost.Cost
+	logger            logger.Logger
+	matrix            costMap
+	errors            []error
 }
 
 func (d *DistanceMatrix) GetCost(_ context.Context, from, to point.Point) (*cost.Cost, error) {
-	f, ok := d.matrix[from]
+	e, ok := d.matrix[costPath{from, to}]
 	if !ok {
 		return nil, ErrPointOutOfMatrix
 	}
 
-	estimation, ok := f[to]
-	if !ok {
-		return nil, ErrPointOutOfMatrix
-	}
-
-	return estimation, nil
+	return e, nil
 }
 
 func (d *DistanceMatrix) buildMatrix(ctx context.Context) error {
-	err := d.assets2Requests(ctx)
-	if err != nil {
-		return err
+	var lock = sync.Mutex{}
+	var points []point.Point
+	for _, r := range d.requests {
+		points = append(points, r.DropOff)
+		points = append(points, r.PickUp)
 	}
+	points = point.UniquePoints(points)
 
-	err = d.request2Requests(ctx)
-	if err != nil {
-		return err
-	}
+	limiter := make(chan int, 10000) // This is just a buffer to limit the number of concurrent goroutines
+	costs := make(chan costResponse)
+	wg := sync.WaitGroup{}
 
-	return nil
-}
+	go d.handleCostResults(costs, &lock, &wg)
 
-func (d *DistanceMatrix) request2Requests(ctx context.Context) error {
-	for _, r1 := range d.requests {
-		if _, ok := d.matrix[r1.PickUp]; !ok {
-			d.matrix[r1.PickUp] = make(map[point.Point]*cost.Cost)
-		}
-		if _, ok := d.matrix[r1.DropOff]; !ok {
-			d.matrix[r1.DropOff] = make(map[point.Point]*cost.Cost)
-		}
-
-		c, err := d.distanceEstimator.GetCost(ctx, r1.PickUp, r1.DropOff)
-		if err != nil {
-			return err
-		}
-		d.matrix[r1.PickUp][r1.DropOff] = c
-
-		c, err = d.distanceEstimator.GetCost(ctx, r1.DropOff, r1.PickUp)
-		if err != nil {
-			return err
-		}
-		d.matrix[r1.DropOff][r1.PickUp] = c
-
-		for _, r2 := range d.requests {
-			c, err := d.distanceEstimator.GetCost(ctx, r1.PickUp, r2.PickUp)
-			if err != nil {
-				return err
-			}
-			d.matrix[r1.PickUp][r2.PickUp] = c
-
-			c, err = d.distanceEstimator.GetCost(ctx, r1.PickUp, r2.DropOff)
-			if err != nil {
-				return err
-			}
-			d.matrix[r1.PickUp][r2.DropOff] = c
-
-			c, err = d.distanceEstimator.GetCost(ctx, r1.DropOff, r2.PickUp)
-			if err != nil {
-				return err
-			}
-			d.matrix[r1.DropOff][r2.PickUp] = c
-
-			c, err = d.distanceEstimator.GetCost(ctx, r1.DropOff, r2.DropOff)
-			if err != nil {
-				return err
-			}
-			d.matrix[r1.DropOff][r2.DropOff] = c
-		}
-	}
-	return nil
-}
-
-func (d *DistanceMatrix) assets2Requests(ctx context.Context) error {
 	for _, a := range d.assets {
-		if _, ok := d.matrix[a.Location]; !ok {
-			d.matrix[a.Location] = make(map[point.Point]*cost.Cost)
-		}
+		d.getCostFrom2Points(ctx, costs, limiter, &wg, a.Location, points...)
+	}
 
-		for _, r := range d.requests {
-			c, err := d.distanceEstimator.GetCost(ctx, a.Location, r.PickUp)
-			if err != nil {
-				return err
-			}
-			d.matrix[a.Location][r.PickUp] = c
+	for _, p := range points {
+		d.getCostFrom2Points(ctx, costs, limiter, &wg, p, points...)
+	}
 
-			c, err = d.distanceEstimator.GetCost(ctx, a.Location, r.DropOff)
-			if err != nil {
-				return err
-			}
-			d.matrix[a.Location][r.DropOff] = c
-		}
+	wg.Wait()
+	if len(d.errors) > 0 {
+		d.logger.Errorf("Error building Cost MatrixL: %s", d.errors)
+		return ErrBuildingMatrix
 	}
 	return nil
+}
+
+func (d *DistanceMatrix) getCostFrom2Points(ctx context.Context, costResults chan costResponse, sem chan int, wg *sync.WaitGroup, from point.Point, to ...point.Point) {
+	for _, p := range to {
+		sem <- 1
+		wg.Add(1)
+		go func(p point.Point) {
+			c, err := d.distanceEstimator.GetCost(ctx, from, p)
+			costMap := costMap{}
+			costMap[costPath{from, p}] = c
+			costResults <- costResponse{costMap: costMap, err: err}
+			<-sem
+		}(p)
+	}
+}
+
+func (d *DistanceMatrix) handleCostResults(costs chan costResponse, lock sync.Locker, wg *sync.WaitGroup) {
+	for result := range costs {
+		lock.Lock()
+		if result.err != nil {
+			d.errors = append(d.errors, result.err)
+		}
+		for path, c := range result.costMap {
+			d.matrix[path] = c
+		}
+		lock.Unlock()
+		wg.Done()
+	}
+}
+
+type costPath [2]point.Point
+type costMap map[costPath]*cost.Cost
+
+type costResponse struct {
+	costMap costMap
+	err     error
 }

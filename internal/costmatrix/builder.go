@@ -4,9 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/edusalguero/roteiro.git/internal/cost"
 	"github.com/edusalguero/roteiro.git/internal/distanceestimator"
-	"github.com/edusalguero/roteiro.git/internal/point"
+	"github.com/edusalguero/roteiro.git/internal/logger"
 	"github.com/edusalguero/roteiro.git/internal/problem"
 )
 
@@ -17,11 +16,12 @@ type Builder struct {
 	distanceMatrix DistanceMatrix
 }
 
-func NewDistanceMatrixBuilder(distanceEstimator distanceestimator.Service) Builder {
+func NewDistanceMatrixBuilder(distanceEstimator distanceestimator.Service, log logger.Logger) Builder {
 	return Builder{
 		DistanceMatrix{
 			distanceEstimator: distanceEstimator,
-			matrix:            make(map[point.Point]map[point.Point]*cost.Cost),
+			matrix:            make(costMap),
+			logger:            log,
 		},
 	}
 }
