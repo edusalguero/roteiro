@@ -7,6 +7,7 @@ import (
 
 	"github.com/edusalguero/roteiro.git/internal/cost"
 	"github.com/edusalguero/roteiro.git/internal/distanceestimator"
+	"github.com/edusalguero/roteiro.git/internal/logger"
 	"github.com/edusalguero/roteiro.git/internal/point"
 	"github.com/edusalguero/roteiro.git/internal/problem"
 	"github.com/stretchr/testify/assert"
@@ -118,7 +119,7 @@ func TestDistanceMatrix_GetDistance(t *testing.T) {
 	}
 
 	e := distanceestimator.NewHaversineDistanceEstimator(80)
-	b := NewDistanceMatrixBuilder(e)
+	b := NewDistanceMatrixBuilder(e, logger.NewNopLogger())
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			dm, err := b.WithRequests(tt.requests).WithAssets(tt.assets).Build(context.Background())

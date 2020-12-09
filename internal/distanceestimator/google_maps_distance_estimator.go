@@ -3,6 +3,7 @@ package distanceestimator
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/edusalguero/roteiro.git/internal/cost"
 	"github.com/edusalguero/roteiro.git/internal/logger"
@@ -11,17 +12,23 @@ import (
 )
 
 type GoogleMapsDistanceEstimator struct {
-	client *maps.Client
-	logger logger.Logger
-	cache  map[string]cost.Cost
+	client         *maps.Client
+	logger         logger.Logger
+	cache          map[string]cost.Cost
+	cacheWriteLock sync.Mutex
 }
 
 func NewGoogleMapsDistanceEstimator(apiKey string, l logger.Logger) (Service, error) {
-	c, err := maps.NewClient(maps.WithAPIKey(apiKey))
+	c, err := maps.NewClient(maps.WithAPIKey(apiKey), maps.WithRateLimit(0))
 	if err != nil {
 		return nil, err
 	}
-	return &GoogleMapsDistanceEstimator{client: c, logger: l, cache: make(map[string]cost.Cost)}, nil
+	return &GoogleMapsDistanceEstimator{
+		client:         c,
+		logger:         l,
+		cache:          make(map[string]cost.Cost),
+		cacheWriteLock: sync.Mutex{},
+	}, nil
 }
 
 func (g *GoogleMapsDistanceEstimator) GetCost(ctx context.Context, from, to point.Point) (*cost.Cost, error) {
@@ -63,6 +70,14 @@ func (g *GoogleMapsDistanceEstimator) GetCost(ctx context.Context, from, to poin
 		Distance: float64(r.Distance.Meters),
 		Duration: r.Duration,
 	}
-	g.cache[fmt.Sprintf("%s-%s", from, to)] = e
+
+	g.addToCache(from, to, e)
+
 	return &e, nil
+}
+
+func (g *GoogleMapsDistanceEstimator) addToCache(from, to point.Point, e cost.Cost) {
+	g.cacheWriteLock.Lock()
+	g.cache[fmt.Sprintf("%s-%s", from, to)] = e
+	g.cacheWriteLock.Unlock()
 }

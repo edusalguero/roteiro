@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/edusalguero/roteiro.git/internal/distanceestimator"
+	"github.com/edusalguero/roteiro.git/internal/logger"
 	"github.com/edusalguero/roteiro.git/internal/point"
 	"github.com/edusalguero/roteiro.git/internal/problem"
 	"github.com/stretchr/testify/assert"
@@ -69,7 +70,7 @@ func TestNewDistanceMatrixBuilder(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			builder := NewDistanceMatrixBuilder(e)
+			builder := NewDistanceMatrixBuilder(e, logger.NewNopLogger())
 			m, err := builder.WithAssets(tt.assets).WithRequests(tt.requests).Build(context.Background())
 
 			if (err != nil) != tt.wantErr {

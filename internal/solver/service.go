@@ -3,6 +3,7 @@ package solver
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/edusalguero/roteiro.git/internal/algorithms"
 	"github.com/edusalguero/roteiro.git/internal/costmatrix"
@@ -31,23 +32,33 @@ func NewSolver(d distanceestimator.Service, log logger.Logger) *Solver {
 }
 
 func (s *Solver) SolveProblem(ctx context.Context, p problem.Problem) (*problem.Solution, error) {
-	matrix, err := costmatrix.NewDistanceMatrixBuilder(s.distanceEstimator).
+	log := s.logger.WithField("problem_id", p.ID)
+
+	start := time.Now()
+	log.Infof("Building Cost Matrix...")
+	matrix, err := costmatrix.NewDistanceMatrixBuilder(s.distanceEstimator, s.logger).
 		WithAssets(p.Fleet).
 		WithRequests(p.Requests).
 		Build(ctx)
 	if err != nil {
+		log.Errorf("Building Cost Matrix done %s", err)
 		return nil, ErrBuildingDistanceMatrix
 	}
+	duration := time.Since(start)
+	log.Infof("Cost Matrix done in %s", duration)
 
 	routeE := routeestimator.NewEstimator(matrix)
 	algo := algorithms.NewSequentialConstruction(s.logger, routeE, matrix)
 
 	algoProblem := NewAlgoProblemFromSolverProblem(p)
+	log.Infof("Solving problem...")
 	sol, err := algo.Solve(ctx, algoProblem)
-
 	if err != nil {
+		log.Errorf("Solving algorithm", err)
 		return nil, ErrInAlgo
 	}
+
+	log.Infof("Problem solved in %s", sol.Metrics.Duration)
 	return &problem.Solution{
 		ID:       p.ID,
 		Solution: *sol,
