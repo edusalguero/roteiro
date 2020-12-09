@@ -14,7 +14,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/edusalguero/roteiro.git/internal/distanceestimator"
+	"github.com/edusalguero/roteiro.git/internal/cost"
 	"github.com/edusalguero/roteiro.git/internal/logger"
 	"github.com/edusalguero/roteiro.git/internal/model"
 	"github.com/edusalguero/roteiro.git/internal/point"
@@ -22,13 +22,13 @@ import (
 )
 
 type SequentialConstruction struct {
-	logger            logger.Logger
-	routeEstimator    routeestimator.Estimator
-	distanceEstimator distanceestimator.Service
+	logger         logger.Logger
+	routeEstimator routeestimator.Estimator
+	costEstimator  cost.Service
 }
 
-func NewSequentialConstruction(l logger.Logger, e routeestimator.Estimator, de distanceestimator.Service) *SequentialConstruction {
-	return &SequentialConstruction{logger: l, routeEstimator: e, distanceEstimator: de}
+func NewSequentialConstruction(l logger.Logger, e routeestimator.Estimator, de cost.Service) *SequentialConstruction {
+	return &SequentialConstruction{logger: l, routeEstimator: e, costEstimator: de}
 }
 
 // Based on algorithm 2: The Sequential Construction
@@ -300,8 +300,8 @@ func (a *SequentialConstruction) sortRequestFromDepotToDropOffFarthestFirst(
 		if requests[i] == nil || requests[j] == nil {
 			return false
 		}
-		distanceToI, _ := a.distanceEstimator.EstimateDistance(ctx, depot, requests[i].DropOff)
-		distanceToJ, _ := a.distanceEstimator.EstimateDistance(ctx, depot, requests[j].DropOff)
+		distanceToI, _ := a.costEstimator.GetCost(ctx, depot, requests[i].DropOff)
+		distanceToJ, _ := a.costEstimator.GetCost(ctx, depot, requests[j].DropOff)
 
 		return distanceToI.Distance > distanceToJ.Distance
 	})
@@ -352,7 +352,7 @@ func (a *SequentialConstruction) updateRequestServiceTime(
 	request *model.Request,
 	timeFactor float64,
 ) {
-	toPickUp, _ := a.distanceEstimator.EstimateDistance(ctx, assetLocation, request.PickUp)
+	toPickUp, _ := a.costEstimator.GetCost(ctx, assetLocation, request.PickUp)
 	request.PickUpServiceTime = increaseDurationInAFactor(toPickUp.Duration, timeFactor)
 
 	directRoute, _ := a.routeEstimator.GetRouteEstimation(ctx, []point.Point{assetLocation, request.PickUp, request.DropOff})

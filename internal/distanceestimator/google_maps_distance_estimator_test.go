@@ -6,12 +6,13 @@ import (
 	"testing"
 
 	"github.com/edusalguero/roteiro.git/internal/config"
+	"github.com/edusalguero/roteiro.git/internal/cost"
 	"github.com/edusalguero/roteiro.git/internal/logger"
 	"github.com/edusalguero/roteiro.git/internal/point"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGoogleMapsDistanceEstimator_EstimateRouteDistances(t *testing.T) {
+func TestGoogleMapsDistanceEstimator_GetCost(t *testing.T) {
 	cnf, err := config.Get()
 	if err != nil {
 		t.Errorf("Invalid config = %v", err)
@@ -20,17 +21,24 @@ func TestGoogleMapsDistanceEstimator_EstimateRouteDistances(t *testing.T) {
 		name string
 		from point.Point
 		to   point.Point
-		want *RouteEstimation
+		want *cost.Cost
 	}{
 		{
 			"As Pontes - Sada",
 			point.NewPoint(43.450218, -7.853109),
 			point.NewPoint(43.347306, -8.276904),
-			&RouteEstimation{
-				From:     point.NewPoint(43.450218, -7.853109),
-				To:       point.NewPoint(43.347306, -8.276904),
+			&cost.Cost{
 				Distance: 57406,
 				Duration: 2988000000000,
+			},
+		},
+		{
+			"Same from and to",
+			point.NewPoint(43.450218, -7.853109),
+			point.NewPoint(43.450218, -7.853109),
+			&cost.Cost{
+				Distance: 0,
+				Duration: 0,
 			},
 		},
 	}
@@ -42,14 +50,12 @@ func TestGoogleMapsDistanceEstimator_EstimateRouteDistances(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := g.EstimateDistance(context.TODO(), tt.from, tt.to)
+			got, err := g.GetCost(context.TODO(), tt.from, tt.to)
 			if err != nil {
 				t.Errorf("EstimateDistance() error = %v", err)
 				return
 			}
 			assert.NoError(t, err)
-			assert.Equal(t, tt.want.From, got.From)
-			assert.Equal(t, tt.want.To, got.To)
 			assert.Equal(t, tt.want.Distance, got.Distance)
 			// This is a Padron pepper test.
 			// Depending on the time of day the test passes or not because the time estimate changes a few seconds...

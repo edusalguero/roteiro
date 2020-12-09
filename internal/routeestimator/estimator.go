@@ -4,15 +4,16 @@ import (
 	"context"
 	"time"
 
-	"github.com/edusalguero/roteiro.git/internal/distanceestimator"
+	"github.com/edusalguero/roteiro.git/internal/cost"
+	"github.com/edusalguero/roteiro.git/internal/costmatrix"
 	"github.com/edusalguero/roteiro.git/internal/point"
 )
 
 type Estimator struct {
-	de distanceestimator.Service
+	de cost.Service
 }
 
-func NewEstimator(de distanceestimator.Service) Estimator {
+func NewEstimator(de costmatrix.Service) Estimator {
 	return Estimator{de: de}
 }
 func (e Estimator) GetRouteEstimation(ctx context.Context, points []point.Point) (*Estimation, error) {
@@ -24,7 +25,7 @@ func (e Estimator) GetRouteEstimation(ctx context.Context, points []point.Point)
 		if i+1 >= l {
 			break
 		}
-		re, err := e.de.EstimateDistance(ctx, points[i], points[i+1])
+		re, err := e.de.GetCost(ctx, points[i], points[i+1])
 		if err != nil {
 			return nil, err
 		}
@@ -45,15 +46,15 @@ func (e Estimator) GetRouteEstimation(ctx context.Context, points []point.Point)
 	}, nil
 }
 
+type Estimation struct {
+	Legs          []Leg
+	TotalDistance float64
+	TotalDuration time.Duration
+}
+
 type Leg struct {
 	From     point.Point
 	To       point.Point
 	Distance float64
 	Duration time.Duration
-}
-
-type Estimation struct {
-	Legs          []Leg
-	TotalDistance float64
-	TotalDuration time.Duration
 }

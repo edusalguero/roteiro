@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/edusalguero/roteiro.git/internal/cost"
 	"github.com/edusalguero/roteiro.git/internal/logger"
 	"github.com/edusalguero/roteiro.git/internal/point"
 	"googlemaps.github.io/maps"
@@ -12,7 +13,7 @@ import (
 type GoogleMapsDistanceEstimator struct {
 	client *maps.Client
 	logger logger.Logger
-	cache  map[string]RouteEstimation
+	cache  map[string]cost.Cost
 }
 
 func NewGoogleMapsDistanceEstimator(apiKey string, l logger.Logger) (Service, error) {
@@ -20,18 +21,16 @@ func NewGoogleMapsDistanceEstimator(apiKey string, l logger.Logger) (Service, er
 	if err != nil {
 		return nil, err
 	}
-	return &GoogleMapsDistanceEstimator{client: c, logger: l, cache: make(map[string]RouteEstimation)}, nil
+	return &GoogleMapsDistanceEstimator{client: c, logger: l, cache: make(map[string]cost.Cost)}, nil
 }
 
-func (g *GoogleMapsDistanceEstimator) EstimateDistance(ctx context.Context, from, to point.Point) (*RouteEstimation, error) {
+func (g *GoogleMapsDistanceEstimator) GetCost(ctx context.Context, from, to point.Point) (*cost.Cost, error) {
 	if e, ok := g.cache[fmt.Sprintf("%s-%s", from, to)]; ok {
 		return &e, nil
 	}
 
 	if from.Equal(to) {
-		return &RouteEstimation{
-			From:     from,
-			To:       to,
+		return &cost.Cost{
 			Distance: float64(0),
 			Duration: 0,
 		}, nil
@@ -60,9 +59,7 @@ func (g *GoogleMapsDistanceEstimator) EstimateDistance(ctx context.Context, from
 		return nil, fmt.Errorf("invalid response element status")
 	}
 
-	e := RouteEstimation{
-		From:     from,
-		To:       to,
+	e := cost.Cost{
 		Distance: float64(r.Distance.Meters),
 		Duration: r.Duration,
 	}
