@@ -45,20 +45,22 @@ func (s *Solver) SolveProblem(ctx context.Context, p problem.Problem) (*problem.
 		return nil, ErrBuildingDistanceMatrix
 	}
 	duration := time.Since(start)
-	log.Infof("Cost Matrix done in %s", duration)
+	log.WithField("duration", duration).Infof("Cost Matrix done [%s]", duration)
 
 	routeE := routeestimator.NewEstimator(matrix)
 	algo := algorithms.NewSequentialConstruction(s.logger, routeE, matrix)
 
 	algoProblem := NewAlgoProblemFromSolverProblem(p)
 	log.Infof("Solving problem...")
+	start = time.Now()
 	sol, err := algo.Solve(ctx, algoProblem)
+	duration = time.Since(start)
 	if err != nil {
 		log.Errorf("Solving algorithm", err)
 		return nil, ErrInAlgo
 	}
 
-	log.Infof("Problem solved in %s", sol.Metrics.Duration)
+	log.WithField("duration", duration).Infof("Problem solved [%s]", duration)
 	return &problem.Solution{
 		ID:       p.ID,
 		Solution: *sol,

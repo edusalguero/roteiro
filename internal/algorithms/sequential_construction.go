@@ -288,7 +288,38 @@ func (a *SequentialConstruction) cost(ctx context.Context, r model.Route, asset 
 
 	twv := countTimeWindowViolations(r, estimation)
 	cv := countCapacityViolations(int(asset.Capacity), r)
-	return W1*estimation.TotalDuration.Minutes() + W2*float64(twv) + W3*float64(cv), nil
+
+	vs := []float64{estimation.TotalDuration.Minutes(), float64(twv), float64(cv)}
+	d := W1 * normalize(estimation.TotalDuration.Minutes(), vs)
+	t := W2 * normalize(float64(twv), vs)
+	c := W3 * normalize(float64(cv), vs)
+	return W1*d + W2*t + W3*c, nil
+}
+
+func normalize(v float64, vs []float64) float64 {
+	return v - smallest(vs)/biggest(vs) - smallest(vs)
+}
+
+func smallest(values []float64) float64 {
+	var n, s float64
+	for _, v := range values {
+		if v < n {
+			n = v
+			s = n
+		}
+	}
+	return s
+}
+
+func biggest(values []float64) float64 {
+	var n, b float64
+	for _, v := range values {
+		if v > n {
+			n = v
+			b = n
+		}
+	}
+	return b
 }
 
 func (a *SequentialConstruction) sortRequestFromDepotToDropOffFarthestFirst(
