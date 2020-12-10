@@ -13,6 +13,7 @@ import (
 )
 
 func TestGoogleMapsDistanceEstimator_GetCost(t *testing.T) {
+	t.Skip()
 	cnf, err := config.Get()
 	if err != nil {
 		t.Errorf("Invalid config = %v", err)
