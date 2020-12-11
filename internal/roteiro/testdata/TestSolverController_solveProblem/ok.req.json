@@ -19,7 +19,8 @@
       "drop_off": {
         "lat": 52.52568,
         "lon": 13.45345
-      }
+      },
+      "load": 1
     }
   ],
   "constraints": {

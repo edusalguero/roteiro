@@ -61,21 +61,25 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 						RequestID: "As Pontes 1",
 						PickUp:    aspontesLoc,
 						DropOff:   sadaLoc,
+						Load:      1,
 					},
 					{
 						RequestID: "As Pontes 2",
 						PickUp:    aspontesLoc,
 						DropOff:   sadaLoc,
+						Load:      1,
 					},
 					{
 						RequestID: "As Pontes 3",
 						PickUp:    aspontesLoc,
 						DropOff:   sadaLoc,
+						Load:      1,
 					},
 					{
 						RequestID: "As Pontes 4",
 						PickUp:    aspontesLoc,
 						DropOff:   sadaLoc,
+						Load:      1,
 					},
 				},
 				Constraints: model.Constraints{
@@ -102,21 +106,25 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 						RequestID: "As Pontes 1",
 						PickUp:    aspontesLoc,
 						DropOff:   sadaLoc,
+						Load:      1,
 					},
 					{
 						RequestID: "As Pontes 2",
 						PickUp:    aspontesLoc,
 						DropOff:   sadaLoc,
+						Load:      1,
 					},
 					{
 						RequestID: "As Pontes 3",
 						PickUp:    aspontesLoc,
 						DropOff:   sadaLoc,
+						Load:      1,
 					},
 					{
 						RequestID: "As Pontes 4",
 						PickUp:    aspontesLoc,
 						DropOff:   sadaLoc,
+						Load:      1,
 					},
 				},
 				Constraints: model.Constraints{
@@ -129,11 +137,13 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 					RequestID: "As Pontes 3",
 					PickUp:    aspontesLoc,
 					DropOff:   sadaLoc,
+					Load:      1,
 				},
 				{
 					RequestID: "As Pontes 4",
 					PickUp:    aspontesLoc,
 					DropOff:   sadaLoc,
+					Load:      1,
 				},
 			},
 			false,
@@ -159,21 +169,25 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 						RequestID: "As Pontes 1",
 						PickUp:    aspontesLoc,
 						DropOff:   sadaLoc,
+						Load:      1,
 					},
 					{
 						RequestID: "As Pontes 2",
 						PickUp:    aspontesLoc,
 						DropOff:   sadaLoc,
+						Load:      1,
 					},
 					{
 						RequestID: "As Pontes 3",
 						PickUp:    aspontesLoc,
 						DropOff:   sadaLoc,
+						Load:      1,
 					},
 					{
 						RequestID: "As Pontes 4",
 						PickUp:    aspontesLoc,
 						DropOff:   sadaLoc,
+						Load:      1,
 					},
 				},
 
@@ -209,21 +223,25 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 						RequestID: "As Pontes 1",
 						PickUp:    aspontesLoc,
 						DropOff:   sadaLoc,
+						Load:      1,
 					},
 					{
 						RequestID: "As Pontes 2",
 						PickUp:    aspontesLoc,
 						DropOff:   sadaLoc,
+						Load:      1,
 					},
 					{
 						RequestID: "As Pontes 3",
 						PickUp:    aspontesLoc,
 						DropOff:   sadaLoc,
+						Load:      1,
 					},
 					{
 						RequestID: "As Pontes 4",
 						PickUp:    aspontesLoc,
 						DropOff:   sadaLoc,
+						Load:      1,
 					},
 				},
 
@@ -239,6 +257,66 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 				RequestID: "As Pontes 4",
 				PickUp:    aspontesLoc,
 				DropOff:   sadaLoc,
+				Load:      1,
+			}},
+			false,
+			false,
+		},
+		{
+			"Insufficient capacity by a given request",
+			model.Problem{
+				Fleet: []model.Asset{
+					{
+						AssetID:  "As Pontes Asset",
+						Location: aspontesLoc,
+						Capacity: 2,
+					},
+					{
+						AssetID:  "Miño Asset",
+						Location: minoLoc,
+						Capacity: 1,
+					},
+				},
+				Requests: []model.Request{
+					{
+						RequestID: "As Pontes 1",
+						PickUp:    aspontesLoc,
+						DropOff:   sadaLoc,
+						Load:      1,
+					},
+					{
+						RequestID: "As Pontes 2",
+						PickUp:    aspontesLoc,
+						DropOff:   sadaLoc,
+						Load:      1,
+					},
+					{
+						RequestID: "As Pontes 3",
+						PickUp:    aspontesLoc,
+						DropOff:   sadaLoc,
+						Load:      3,
+					},
+					{
+						RequestID: "As Pontes 4",
+						PickUp:    aspontesLoc,
+						DropOff:   sadaLoc,
+						Load:      1,
+					},
+				},
+
+				Constraints: model.Constraints{
+					MaxJourneyTimeFactor: 1.5,
+				},
+			},
+			[]Route{
+				[]point.Point{aspontesLoc, sadaLoc},
+				[]point.Point{minoLoc, aspontesLoc, sadaLoc},
+			},
+			[]model.Request{{
+				RequestID: "As Pontes 3",
+				PickUp:    aspontesLoc,
+				DropOff:   sadaLoc,
+				Load:      3,
 			}},
 			false,
 			false,
@@ -263,21 +341,25 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 						RequestID: "As Pontes 1",
 						PickUp:    aspontesLoc,
 						DropOff:   sadaLoc,
+						Load:      1,
 					},
 					{
 						RequestID: "As Pontes 2",
 						PickUp:    aspontesLoc,
 						DropOff:   sadaLoc,
+						Load:      1,
 					},
 					{
 						RequestID: "As Pontes 3",
 						PickUp:    aspontesLoc,
 						DropOff:   sadaLoc,
+						Load:      1,
 					},
 					{
 						RequestID: "As Pontes 4",
 						PickUp:    aspontesLoc,
 						DropOff:   sadaLoc,
+						Load:      1,
 					},
 				},
 
@@ -318,21 +400,25 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 						RequestID: "Pontevedra - Sada",
 						PickUp:    pontevedraLoc, // Pontevedra
 						DropOff:   sadaLoc,       // Sada
+						Load:      1,
 					},
 					{
 						RequestID: "Vilalba - Sada",
 						PickUp:    vilalbaLoc, // Vilalba
 						DropOff:   sadaLoc,    // Sada
+						Load:      1,
 					},
 					{
 						RequestID: "As Pontes - Sada",
 						PickUp:    aspontesLoc, // As Pontes
 						DropOff:   sadaLoc,     // Sada
+						Load:      1,
 					},
 					{
 						RequestID: "As Pontes - Miño",
 						PickUp:    aspontesLoc, // As Pontes
 						DropOff:   minoLoc,     // Miño
+						Load:      1,
 					},
 				},
 				Constraints: model.Constraints{
@@ -363,11 +449,13 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 						RequestID: "Order 1",
 						PickUp:    point.NewPoint(49.227107, -123.1163085),
 						DropOff:   point.NewPoint(49.2474624, -123.1532338),
+						Load:      1,
 					},
 					{
 						RequestID: "Order 2",
 						PickUp:    point.NewPoint(49.2474624, -123.1532338),
 						DropOff:   point.NewPoint(49.287107, -122.1163085),
+						Load:      1,
 					},
 				},
 				Constraints: model.Constraints{
@@ -565,6 +653,7 @@ func manyRequests(t *testing.T, oneOrigin point.Point) []model.Request {
 			RequestID: model.RequestID(fmt.Sprintf("Rider %d", i)),
 			PickUp:    oneOrigin,
 			DropOff:   p,
+			Load:      1,
 		})
 	}
 	return many
@@ -582,11 +671,13 @@ func Test_buildWaypoints(t *testing.T) {
 				RequestID: "As Pontes - Sada",
 				PickUp:    aspontesLoc, // As Pontes
 				DropOff:   sadaLoc,     // Sada
+				Load:      1,
 			},
 			{
 				RequestID: "As Pontes - Miño",
 				PickUp:    aspontesLoc, // As Pontes
 				DropOff:   minoLoc,     // Miño
+				Load:      1,
 			},
 		}
 

@@ -88,6 +88,7 @@ func (a *SequentialConstruction) Solve(ctx context.Context, p model.Problem) (*m
 					RequestID: req.RequestID,
 					PickUp:    req.PickUp,
 					DropOff:   req.DropOff,
+					Load:      req.Load,
 				})
 			} else {
 				// Remove req from r
@@ -137,7 +138,7 @@ func (a *SequentialConstruction) Solve(ctx context.Context, p model.Problem) (*m
 func buildWaypoints(points []point.Point, reqs []model.Request, asset model.Asset) []model.Waypoint {
 	var waypoints []model.Waypoint
 
-	var load model.Capacity = 0
+	var load model.Load = 0
 	for i, p := range points {
 		var activities []model.Activity
 		if i == 0 {
@@ -147,13 +148,13 @@ func buildWaypoints(points []point.Point, reqs []model.Request, asset model.Asse
 			var activityType model.ActivityType
 			if req.PickUp == p {
 				activityType = model.ActivityTypePickUp
-				load++
+				load += req.Load
 				activities = append(activities, model.NewActivity(activityType, model.Ref(req.RequestID)))
 			}
 
 			if req.DropOff == p {
 				activityType = model.ActivityTypeDropOff
-				load--
+				load -= req.Load
 				activities = append(activities, model.NewActivity(activityType, model.Ref(req.RequestID)))
 			}
 		}
@@ -181,6 +182,7 @@ func getNotAssignedRequest(requests model.Requests) []model.Request {
 			RequestID: ur.RequestID,
 			PickUp:    ur.PickUp,
 			DropOff:   ur.DropOff,
+			Load:      ur.Load,
 		})
 	}
 
@@ -202,6 +204,7 @@ func (a *SequentialConstruction) addRequestStops(ctx context.Context, r model.Ro
 		RequestID:   &req.RequestID,
 		Point:       req.PickUp,
 		ServiceTime: req.PickUpServiceTime,
+		Load:        req.Load,
 	})
 
 	r = append(r, &model.Stop{
@@ -209,6 +212,7 @@ func (a *SequentialConstruction) addRequestStops(ctx context.Context, r model.Ro
 		RequestID:   &req.RequestID,
 		Point:       req.DropOff,
 		ServiceTime: req.DropOffServiceTime,
+		Load:        -req.Load,
 	})
 	return r
 }
@@ -287,7 +291,7 @@ func (a *SequentialConstruction) cost(ctx context.Context, r model.Route, asset 
 	}
 
 	twv := countTimeWindowViolations(r, estimation)
-	cv := countCapacityViolations(int(asset.Capacity), r)
+	cv := countCapacityViolations(asset.Capacity, r)
 
 	vs := []float64{estimation.TotalDuration.Minutes(), float64(twv), float64(cv)}
 	d := W1 * normalize(estimation.TotalDuration.Minutes(), vs)
@@ -369,12 +373,11 @@ func (a *SequentialConstruction) isFeasibleRoute(ctx context.Context, r model.Ro
 			return false
 		}
 	}
-
 	//  capacity constraint violations
-	occupied := countAssignedRequests(r)
-	feasible := occupied <= int(asset.Capacity)
-	a.logger.Debugf("Is Feasible %b [%d/%d]", feasible, occupied, asset.Capacity)
-	return feasible
+	violations := countCapacityViolations(asset.Capacity, r)
+
+	a.logger.Debugf("Is Feasible %b [Capacity violations: %d]", violations == 0, violations)
+	return violations == 0
 }
 
 func (a *SequentialConstruction) updateRequestServiceTime(
@@ -395,16 +398,18 @@ func increaseDurationInAFactor(duration time.Duration, factor float64) time.Dura
 	return time.Duration(d)
 }
 
-func countCapacityViolations(capacity int, route model.Route) int {
-	reqs := countAssignedRequests(route)
-	if reqs > capacity {
-		return int(math.Abs(float64(reqs - capacity)))
+func countCapacityViolations(capacity model.Capacity, route model.Route) int {
+	violations := 0
+	load := 0
+	route.GetPoints()
+	for _, s := range route {
+		load += int(s.Load)
+		if load > int(capacity) {
+			violations++
+		}
 	}
-	return 0
-}
 
-func countAssignedRequests(route model.Route) int {
-	return (len(route) - 1) / 2
+	return violations
 }
 
 func countTimeWindowViolations(route model.Route, estimation *routeestimator.Estimation) int {

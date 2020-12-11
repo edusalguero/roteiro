@@ -24,6 +24,7 @@ type Asset struct {
 }
 
 type AssetID string
+type Load int
 type Capacity int
 
 type Constraints struct {
@@ -45,7 +46,7 @@ type SolutionRoute struct {
 
 type Waypoint struct {
 	Location   point.Point
-	Load       Capacity
+	Load       Load
 	Activities []Activity
 }
 
@@ -84,6 +85,7 @@ type Requests []*Request
 
 type Request struct {
 	RequestID          RequestID
+	Load               Load
 	PickUp             point.Point
 	DropOff            point.Point
 	PickUpServiceTime  time.Duration
@@ -111,6 +113,7 @@ type Stop struct {
 	RequestID   *RequestID
 	Point       point.Point
 	ServiceTime time.Duration
+	Load        Load
 }
 
 type RequestID string

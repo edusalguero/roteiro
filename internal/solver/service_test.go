@@ -34,21 +34,25 @@ func Test_service_SolveProblem(t *testing.T) {
 		RequestID: "As Pontes 1",
 		PickUp:    aspontesLoc,
 		DropOff:   sadaLoc,
+		Load:      1,
 	}
 	req2 := problem.Request{
 		RequestID: "As Pontes 2",
 		PickUp:    aspontesLoc,
 		DropOff:   sadaLoc,
+		Load:      1,
 	}
 	req3 := problem.Request{
 		RequestID: "As Pontes 3",
 		PickUp:    aspontesLoc,
 		DropOff:   sadaLoc,
+		Load:      1,
 	}
 	req4 := problem.Request{
 		RequestID: "As Pontes 4",
 		PickUp:    aspontesLoc,
 		DropOff:   sadaLoc,
+		Load:      1,
 	}
 
 	p := problem.NewProblem(
@@ -90,11 +94,13 @@ func Test_service_SolveProblem(t *testing.T) {
 							RequestID: model.RequestID(req1.RequestID),
 							PickUp:    req1.PickUp,
 							DropOff:   req1.DropOff,
+							Load:      1,
 						},
 						{
 							RequestID: model.RequestID(req2.RequestID),
 							PickUp:    req2.PickUp,
 							DropOff:   req2.DropOff,
+							Load:      1,
 						},
 					},
 					Waypoints: []model.Waypoint{
@@ -153,11 +159,13 @@ func Test_service_SolveProblem(t *testing.T) {
 							RequestID: model.RequestID(req3.RequestID),
 							PickUp:    req1.PickUp,
 							DropOff:   req1.DropOff,
+							Load:      1,
 						},
 						{
 							RequestID: model.RequestID(req4.RequestID),
 							PickUp:    req2.PickUp,
 							DropOff:   req2.DropOff,
+							Load:      1,
 						},
 					},
 					Waypoints: []model.Waypoint{

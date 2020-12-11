@@ -130,6 +130,9 @@ components:
       properties:
         requester_id:
           type: string
+        load:
+          type: integer
+          format: int32
         pick_up:
           $ref: '#/components/schemas/Point'
         drop_off:
