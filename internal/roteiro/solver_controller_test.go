@@ -83,6 +83,7 @@ func TestSolverController_solveProblem(t *testing.T) {
 											RequestID: "requester ID",
 											PickUp:    point.NewPoint(52.52568, 13.45345),
 											DropOff:   point.NewPoint(52.52568, 13.45345),
+											Load:      1,
 										},
 									},
 									Waypoints: []model.Waypoint{

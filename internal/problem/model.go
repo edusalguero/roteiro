@@ -23,11 +23,13 @@ type Asset struct {
 
 type AssetID string
 type Capacity int8
+type Load int8
 
 type Request struct {
 	RequestID          RequestID
 	PickUp             point.Point
 	DropOff            point.Point
+	Load               Load
 	PickUpServiceTime  time.Duration
 	DropOffServiceTime time.Duration
 }

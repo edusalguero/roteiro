@@ -74,6 +74,7 @@ func NewAlgoProblemFromSolverProblem(p problem.Problem) model.Problem {
 			RequestID: model.RequestID(req.RequestID),
 			PickUp:    req.PickUp,
 			DropOff:   req.DropOff,
+			Load:      model.Load(req.Load),
 		})
 	}
 

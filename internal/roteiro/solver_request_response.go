@@ -25,6 +25,7 @@ type request struct {
 	RequesterID string `json:"requester_id"`
 	PickUp      Point  `json:"pick_up"`
 	DropOff     Point  `json:"drop_off"`
+	Load        uint8  `json:"load"`
 }
 
 type constraints struct {
@@ -159,6 +160,7 @@ func newResponseRequestFromModelRequest(req model.Request) request {
 			Lat: req.DropOff.Lat(),
 			Lon: req.DropOff.Lon(),
 		},
+		Load: uint8(req.Load),
 	}
 }
 
@@ -178,6 +180,7 @@ func newProblemFromRequest(req problemRequest, id uuid.UUID) problem.Problem {
 			RequestID: problem.RequestID(r.RequesterID),
 			PickUp:    point.NewPoint(r.PickUp.Lat, r.PickUp.Lon),
 			DropOff:   point.NewPoint(r.DropOff.Lat, r.DropOff.Lon),
+			Load:      problem.Load(r.Load),
 		})
 	}
 	return problem.Problem{
