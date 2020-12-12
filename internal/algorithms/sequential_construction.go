@@ -294,9 +294,9 @@ func (a *SequentialConstruction) cost(ctx context.Context, r model.Route, asset 
 	cv := countCapacityViolations(asset.Capacity, r)
 
 	vs := []float64{estimation.TotalDuration.Minutes(), float64(twv), float64(cv)}
-	d := W1 * normalize(estimation.TotalDuration.Minutes(), vs)
-	t := W2 * normalize(float64(twv), vs)
-	c := W3 * normalize(float64(cv), vs)
+	d := normalize(estimation.TotalDuration.Minutes(), vs)
+	t := normalize(float64(twv), vs)
+	c := normalize(float64(cv), vs)
 	return W1*d + W2*t + W3*c, nil
 }
 
@@ -401,7 +401,6 @@ func increaseDurationInAFactor(duration time.Duration, factor float64) time.Dura
 func countCapacityViolations(capacity model.Capacity, route model.Route) int {
 	violations := 0
 	load := 0
-	route.GetPoints()
 	for _, s := range route {
 		load += int(s.Load)
 		if load > int(capacity) {
