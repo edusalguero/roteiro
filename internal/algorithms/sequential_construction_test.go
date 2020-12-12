@@ -435,6 +435,41 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 			false,
 		},
 		{
+			"Similar points reverse order",
+			model.Problem{
+				Fleet: []model.Asset{
+					{
+						AssetID:  "Pontedeume Asset",
+						Location: pontedeumeLoc,
+						Capacity: 4,
+					},
+				},
+				Requests: []model.Request{
+					{
+						RequestID: "As Pontes - Sada",
+						PickUp:    aspontesLoc, // As Pontes
+						DropOff:   sadaLoc,     // Sada
+						Load:      1,
+					},
+					{
+						RequestID: "Miño - As Pontes",
+						PickUp:    minoLoc,     // Miño
+						DropOff:   aspontesLoc, // As Pontes
+						Load:      1,
+					},
+				},
+				Constraints: model.Constraints{
+					MaxJourneyTimeFactor: 1.5,
+				},
+			},
+			[]Route{
+				[]point.Point{pontedeumeLoc, minoLoc, aspontesLoc, sadaLoc},
+			},
+			[]model.Request{},
+			false,
+			false,
+		},
+		{
 			"Routific example",
 			model.Problem{
 				Fleet: []model.Asset{

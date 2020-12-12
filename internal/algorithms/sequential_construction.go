@@ -75,7 +75,7 @@ func (a *SequentialConstruction) Solve(ctx context.Context, p model.Problem) (*m
 			req := *ur
 			a.logger.Debugf("###  Adding request a new route: %s", req.RequestID)
 			r = a.addRequestStops(ctx, r, assetLocation, req, p.GetMaxJourneyTimeFactor())
-			r, err = a.hillClimbingRoutingAlgorithmV2(ctx, r, asset)
+			r, err = a.hillClimbingRoutingAlgorithmV3(ctx, r, asset)
 			if err != nil {
 				return nil, err
 			}
@@ -219,28 +219,16 @@ func (a *SequentialConstruction) addRequestStops(ctx context.Context, r model.Ro
 
 // Based on algorithm 1: The HC routing algorithm.
 // https://www.sciencedirect.com/science/article/pii/S131915781100036X#n0035
-func (a *SequentialConstruction) hillClimbingRoutingAlgorithmV2(ctx context.Context, r model.Route, asset model.Asset) (model.Route, error) {
+func (a *SequentialConstruction) hillClimbingRoutingAlgorithmV3(ctx context.Context, r model.Route, asset model.Asset) (model.Route, error) {
 	l := len(r)
-	cursor := l - 1
-
-	for {
-		current := r[cursor]
-		compareCursor := l - 1
+	for i := range r {
+		i := l - 1 - i
+		current := r[i]
 		if current.IsDepot() {
 			break
 		}
-		for {
-			neighbor := r[compareCursor]
-			if neighbor.IsDepot() {
-				break
-			}
-
-			if compareCursor == cursor {
-				// Same point
-				compareCursor--
-				continue
-			}
-
+		for j := l - 1; j > 0; j-- {
+			neighbor := r[j]
 			a.logger.Debugf("Comparing ServiceTimes [%s] vs [%s]: (%v, %v)%v", current.Name, neighbor.Name, current.GetServiceTime(), neighbor.GetServiceTime(), current.GetServiceTime() < neighbor.GetServiceTime())
 			if current.GetServiceTime() > neighbor.GetServiceTime() {
 				rPrima := r
@@ -248,7 +236,7 @@ func (a *SequentialConstruction) hillClimbingRoutingAlgorithmV2(ctx context.Cont
 				if err != nil {
 					return nil, err
 				}
-				rPrima.Swap(cursor, compareCursor)
+				rPrima.Swap(i, j)
 				costRPrima, err := a.cost(ctx, rPrima, asset)
 				if err != nil {
 					return nil, err
@@ -258,9 +246,7 @@ func (a *SequentialConstruction) hillClimbingRoutingAlgorithmV2(ctx context.Cont
 					a.logger.Debugf("Updated r [Cost(%d) vs NewCost(%d)]", costR, costRPrima)
 				}
 			}
-			compareCursor--
 		}
-		cursor--
 	}
 	return r, nil
 }
