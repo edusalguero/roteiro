@@ -28,17 +28,23 @@ func (s StaticMap) Render(solution *problem.Solution) (image.Image, error) {
 	mapCtx := maps.NewContext()
 	mapCtx.SetSize(800, 800)
 	for _, r := range solution.Routes {
-		mapCtx.AddMarker(createMarker(r.Asset.Location, string(r.Asset.AssetID), randomColor()))
+		mapCtx.AddMarker(createMarker(r.Asset.Location, string(r.Asset.AssetID), randomColor(), 4))
 		for _, req := range r.Requests {
 			c := randomColor()
-			mapCtx.AddMarker(createMarker(req.PickUp, string(req.RequestID), c))
-			mapCtx.AddMarker(createMarker(req.DropOff, string(req.RequestID), c))
+			mapCtx.AddMarker(createMarker(req.PickUp, string(req.RequestID), c, 5))
+			mapCtx.AddMarker(createMarker(req.DropOff, string(req.RequestID), c, 5))
 		}
 		var positions []s2.LatLng
 		for _, w := range r.Waypoints {
 			positions = append(positions, s2PointFromPoint(w.Location))
 		}
 		mapCtx.AddPath(maps.NewPath(positions, randomColor(), 3))
+	}
+
+	for _, req := range solution.Unassigned {
+		c := randomColor()
+		mapCtx.AddMarker(createMarker(req.PickUp, string(req.RequestID), c, 6))
+		mapCtx.AddMarker(createMarker(req.DropOff, string(req.RequestID), c, 6))
 	}
 
 	img, err := mapCtx.Render()
@@ -48,7 +54,7 @@ func (s StaticMap) Render(solution *problem.Solution) (image.Image, error) {
 	return img, nil
 }
 
-func createMarker(p point.Point, _ string, c color.RGBA) *maps.Marker {
+func createMarker(p point.Point, _ string, c color.RGBA, size int) *maps.Marker {
 	m := maps.NewMarker(s2PointFromPoint(p), c, 5)
 	return m
 }
