@@ -9,7 +9,6 @@ package algorithms
 
 import (
 	"context"
-	"fmt"
 	"math"
 	"sort"
 	"time"
@@ -61,10 +60,9 @@ func (a *SequentialConstruction) Solve(ctx context.Context, p model.Problem) (*m
 		var err error
 
 		r = append(r, &model.Stop{
-			Name:        "Asset",
-			RequestID:   nil,
-			Point:       assetLocation,
-			ServiceTime: 0,
+			Ref:      model.Ref(asset.AssetID),
+			Point:    assetLocation,
+			Activity: model.ActivityTypeStart,
 		})
 
 		for i := range unassignedRequests {
@@ -102,7 +100,7 @@ func (a *SequentialConstruction) Solve(ctx context.Context, p model.Problem) (*m
 		solutionRoutes = append(solutionRoutes, model.SolutionRoute{
 			Asset:     asset,
 			Requests:  routeReqs,
-			Waypoints: buildWaypoints(point.UniquePoints(r.GetPoints()), routeReqs, asset),
+			Waypoints: buildRouteWaypoints(r, asset),
 			Metrics:   model.RouteMetrics{Duration: re.TotalDuration, Distance: re.TotalDistance},
 		})
 
@@ -135,29 +133,34 @@ func (a *SequentialConstruction) Solve(ctx context.Context, p model.Problem) (*m
 	return &s, nil
 }
 
-func buildWaypoints(points []point.Point, reqs []model.Request, asset model.Asset) []model.Waypoint {
+func buildRouteWaypoints(r model.Route, asset model.Asset) []model.Waypoint {
 	var waypoints []model.Waypoint
-
 	var load model.Load = 0
-	for i, p := range points {
+	l := len(r)
+	for i := 0; i < l; {
+		stop := r[i]
+		p := stop.Point
 		var activities []model.Activity
-		if i == 0 {
-			activities = append(activities, model.NewActivity(model.ActivityTypeStart, model.Ref(asset.AssetID)))
+		if stop.Activity == model.ActivityTypeStart {
+			activities = append(activities, model.NewActivity(stop.Activity, model.Ref(asset.AssetID)))
 		}
-		for _, req := range reqs {
-			var activityType model.ActivityType
-			if req.PickUp == p {
-				activityType = model.ActivityTypePickUp
-				load += req.Load
-				activities = append(activities, model.NewActivity(activityType, model.Ref(req.RequestID)))
-			}
 
-			if req.DropOff == p {
-				activityType = model.ActivityTypeDropOff
-				load -= req.Load
-				activities = append(activities, model.NewActivity(activityType, model.Ref(req.RequestID)))
+		j := i
+		for {
+			if j == l {
+				break
 			}
+			s := r[j]
+			if s.Point != p {
+				break
+			}
+			if s.Activity != model.ActivityTypeStart {
+				load += s.Load
+				activities = append(activities, model.NewActivity(s.Activity, s.Ref))
+			}
+			j++
 		}
+		i = j
 
 		waypoints = append(waypoints, model.Waypoint{
 			Location:   p,
@@ -200,19 +203,19 @@ func assetsWithMoreCapacityFirst(assets []model.Asset) []model.Asset {
 func (a *SequentialConstruction) addRequestStops(ctx context.Context, r model.Route, assetLocation point.Point, req *model.Request, timeFactor float64) model.Route {
 	a.updateRequestServiceTime(ctx, assetLocation, req, timeFactor)
 	r = append(r, &model.Stop{
-		Name:        fmt.Sprintf("%s PickUp", req.RequestID),
-		RequestID:   &req.RequestID,
+		Ref:         req.RequestID,
 		Point:       req.PickUp,
 		ServiceTime: req.PickUpServiceTime,
 		Load:        req.Load,
+		Activity:    model.ActivityTypePickUp,
 	})
 
 	r = append(r, &model.Stop{
-		Name:        fmt.Sprintf("%s DropOff", req.RequestID),
-		RequestID:   &req.RequestID,
+		Ref:         req.RequestID,
 		Point:       req.DropOff,
 		ServiceTime: req.DropOffServiceTime,
 		Load:        -req.Load,
+		Activity:    model.ActivityTypeDropOff,
 	})
 	return r
 }
@@ -224,12 +227,11 @@ func (a *SequentialConstruction) hillClimbingRoutingAlgorithmV3(ctx context.Cont
 	for i := range r {
 		i := l - 1 - i
 		current := r[i]
-		if current.IsDepot() {
+		if current.IsAssetDeparture() {
 			break
 		}
 		for j := l - 1; j > 0; j-- {
 			neighbor := r[j]
-			a.logger.Debugf("Comparing ServiceTimes [%s] vs [%s]: (%v, %v)%v", current.Name, neighbor.Name, current.GetServiceTime(), neighbor.GetServiceTime(), current.GetServiceTime() < neighbor.GetServiceTime())
 			if current.GetServiceTime() > neighbor.GetServiceTime() {
 				rPrima := r
 				costR, err := a.cost(ctx, r, asset)
@@ -333,7 +335,7 @@ func removeFromRoute(r model.Route, req model.Request) model.Route {
 	var route model.Route
 	route = append(route, r[0])
 	for _, stop := range r[1:] {
-		skip := *stop.RequestID == req.RequestID
+		skip := stop.Ref == req.RequestID
 		if !skip {
 			route = append(route, stop)
 		}

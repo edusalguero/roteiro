@@ -71,7 +71,7 @@ func NewAlgoProblemFromSolverProblem(p problem.Problem) model.Problem {
 	var reqs []model.Request
 	for _, req := range p.Requests {
 		reqs = append(reqs, model.Request{
-			RequestID: model.RequestID(req.RequestID),
+			RequestID: model.Ref(req.RequestID),
 			PickUp:    req.PickUp,
 			DropOff:   req.DropOff,
 			Load:      model.Load(req.Load),

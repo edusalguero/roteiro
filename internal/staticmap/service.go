@@ -54,8 +54,8 @@ func (s StaticMap) Render(solution *problem.Solution) (image.Image, error) {
 	return img, nil
 }
 
-func createMarker(p point.Point, _ string, c color.RGBA, size int) *maps.Marker {
-	m := maps.NewMarker(s2PointFromPoint(p), c, 5)
+func createMarker(p point.Point, _ string, c color.RGBA, size float64) *maps.Marker {
+	m := maps.NewMarker(s2PointFromPoint(p), c, size)
 	return m
 }
 
