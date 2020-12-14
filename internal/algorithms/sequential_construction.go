@@ -278,7 +278,12 @@ func (a *SequentialConstruction) cost(ctx context.Context, r model.Route, asset 
 		return math.Inf(0), err
 	}
 
-	twv := countTimeWindowViolations(r, estimation)
+	// time window constraint violations
+	twv, err := a.countTimeWindowViolations(ctx, r)
+	if err != nil {
+		a.logger.Debugf("Error counting time window violations: %s", err)
+		return math.Inf(0), err
+	}
 	cv := countCapacityViolations(asset.Capacity, r)
 
 	vs := []float64{estimation.TotalDuration.Minutes(), float64(twv), float64(cv)}
@@ -345,8 +350,23 @@ func removeFromRoute(r model.Route, req model.Request) model.Route {
 
 func (a *SequentialConstruction) isFeasibleRoute(ctx context.Context, r model.Route, asset model.Asset) bool {
 	// time window constraint violations
+	timeWindowViolations, err := a.countTimeWindowViolations(ctx, r)
+	if err != nil {
+		a.logger.Debugf("Error counting time window violations: %s", err)
+		return false
+	}
+	//  capacity constraint violations
+	violations := countCapacityViolations(asset.Capacity, r)
+
+	feasible := violations == 0 && timeWindowViolations == 0
+	a.logger.Debugf("Is Feasible %b [CV: %d / TWV %d ]", feasible, violations, timeWindowViolations)
+	return feasible
+}
+
+func (a *SequentialConstruction) countTimeWindowViolations(ctx context.Context, r model.Route) (int, error) {
 	points := r.GetPoints()
-	for i := range points {
+	twv := 0
+	for i, stop := range r {
 		if i == 0 {
 			// no time from depot to depot
 			continue
@@ -354,18 +374,14 @@ func (a *SequentialConstruction) isFeasibleRoute(ctx context.Context, r model.Ro
 
 		e, err := a.routeEstimator.GetRouteEstimation(ctx, points[0:i+1])
 		if err != nil {
-			return false
+			return 0, err
 		}
-		ahead := r[i].GetServiceTime() - e.TotalDuration
+		ahead := stop.GetServiceTime() - e.TotalDuration
 		if ahead < 0 {
-			return false
+			twv++
 		}
 	}
-	//  capacity constraint violations
-	violations := countCapacityViolations(asset.Capacity, r)
-
-	a.logger.Debugf("Is Feasible %b [Capacity violations: %d]", violations == 0, violations)
-	return violations == 0
+	return twv, nil
 }
 
 func (a *SequentialConstruction) updateRequestServiceTime(
@@ -397,21 +413,4 @@ func countCapacityViolations(capacity model.Capacity, route model.Route) int {
 	}
 
 	return violations
-}
-
-func countTimeWindowViolations(route model.Route, estimation *routeestimator.Estimation) int {
-	twv := 0
-	for _, stop := range route {
-		duration := time.Duration(0)
-		for _, leg := range estimation.Legs {
-			if leg.To == stop.Point {
-				duration += leg.Duration
-			}
-		}
-		if duration > stop.GetServiceTime() {
-			twv++
-		}
-	}
-
-	return twv
 }
