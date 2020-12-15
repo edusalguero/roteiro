@@ -109,19 +109,20 @@ func (r Route) GetPoints() []point.Point {
 }
 
 type Stop struct {
-	Ref         Ref
-	Point       point.Point
-	ServiceTime time.Duration
-	Load        Load
-	Activity    ActivityType
+	Ref            Ref
+	Point          point.Point
+	MaxServiceTime time.Duration
+	ServiceTime    time.Duration
+	Load           Load
+	Activity       ActivityType
 }
 
 func (s Stop) IsAssetDeparture() bool {
 	return s.Activity == ActivityTypeStart
 }
 
-func (s Stop) GetServiceTime() time.Duration {
-	return s.ServiceTime
+func (s Stop) GetMaxServiceTime() time.Duration {
+	return s.MaxServiceTime
 }
 
 func (s Stop) String() string {

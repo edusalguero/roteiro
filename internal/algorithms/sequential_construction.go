@@ -203,19 +203,19 @@ func assetsWithMoreCapacityFirst(assets []model.Asset) []model.Asset {
 func (a *SequentialConstruction) addRequestStops(ctx context.Context, r model.Route, assetLocation point.Point, req *model.Request, timeFactor float64) model.Route {
 	a.updateRequestServiceTime(ctx, assetLocation, req, timeFactor)
 	r = append(r, &model.Stop{
-		Ref:         req.RequestID,
-		Point:       req.PickUp,
-		ServiceTime: req.PickUpServiceTime,
-		Load:        req.Load,
-		Activity:    model.ActivityTypePickUp,
+		Ref:            req.RequestID,
+		Point:          req.PickUp,
+		MaxServiceTime: req.PickUpServiceTime,
+		Load:           req.Load,
+		Activity:       model.ActivityTypePickUp,
 	})
 
 	r = append(r, &model.Stop{
-		Ref:         req.RequestID,
-		Point:       req.DropOff,
-		ServiceTime: req.DropOffServiceTime,
-		Load:        -req.Load,
-		Activity:    model.ActivityTypeDropOff,
+		Ref:            req.RequestID,
+		Point:          req.DropOff,
+		MaxServiceTime: req.DropOffServiceTime,
+		Load:           -req.Load,
+		Activity:       model.ActivityTypeDropOff,
 	})
 	return r
 }
@@ -232,7 +232,7 @@ func (a *SequentialConstruction) hillClimbingRoutingAlgorithmV3(ctx context.Cont
 		}
 		for j := l - 1; j > 0; j-- {
 			neighbor := r[j]
-			if current.GetServiceTime() > neighbor.GetServiceTime() {
+			if current.GetMaxServiceTime() > neighbor.GetMaxServiceTime() {
 				rPrima := r
 				costR, err := a.cost(ctx, r, asset)
 				if err != nil {
@@ -349,17 +349,24 @@ func removeFromRoute(r model.Route, req model.Request) model.Route {
 }
 
 func (a *SequentialConstruction) isFeasibleRoute(ctx context.Context, r model.Route, asset model.Asset) bool {
-	// time window constraint violations
+	// time window constraint capacityViolations
 	timeWindowViolations, err := a.countTimeWindowViolations(ctx, r)
 	if err != nil {
-		a.logger.Debugf("Error counting time window violations: %s", err)
+		a.logger.Debugf("Error counting time window capacityViolations: %s", err)
 		return false
 	}
-	//  capacity constraint violations
-	violations := countCapacityViolations(asset.Capacity, r)
 
-	feasible := violations == 0 && timeWindowViolations == 0
-	a.logger.Debugf("Is Feasible %b [CV: %d / TWV %d ]", feasible, violations, timeWindowViolations)
+	//  capacity constraint capacityViolations
+	orderViolations := countOrderViolations(r)
+	if asset.AssetID == "asset 4" {
+		a.logger.Debugf("Order capacityViolations", orderViolations)
+	}
+
+	//  capacity constraint capacityViolations
+	capacityViolations := countCapacityViolations(asset.Capacity, r)
+
+	feasible := capacityViolations == 0 && timeWindowViolations == 0 && orderViolations == 0
+	a.logger.Debugf("Is Feasible %b [CV: %d / TWV %d / OV: %d ]", feasible, capacityViolations, timeWindowViolations, orderViolations)
 	return feasible
 }
 
@@ -376,8 +383,8 @@ func (a *SequentialConstruction) countTimeWindowViolations(ctx context.Context, 
 		if err != nil {
 			return 0, err
 		}
-		ahead := stop.GetServiceTime() - e.TotalDuration
-		if ahead < 0 {
+		r[i].ServiceTime = e.TotalDuration // Set route service time
+		if e.TotalDuration > stop.GetMaxServiceTime() {
 			twv++
 		}
 	}
@@ -395,6 +402,26 @@ func (a *SequentialConstruction) updateRequestServiceTime(
 
 	directRoute, _ := a.routeEstimator.GetRouteEstimation(ctx, []point.Point{assetLocation, request.PickUp, request.DropOff})
 	request.DropOffServiceTime = increaseDurationInAFactor(directRoute.TotalDuration, timeFactor)
+}
+
+func countOrderViolations(r model.Route) int {
+	violations := 0
+	for i, stop := range r {
+		if stop.Activity == model.ActivityTypeStart {
+			continue
+		}
+		for j := i; j < len(r); j++ {
+			if r[j].Ref != stop.Ref {
+				continue
+			}
+
+			if r[j].Activity == model.ActivityTypePickUp && stop.Activity == model.ActivityTypeDropOff {
+				violations++
+			}
+		}
+	}
+
+	return violations
 }
 
 func increaseDurationInAFactor(duration time.Duration, factor float64) time.Duration {
