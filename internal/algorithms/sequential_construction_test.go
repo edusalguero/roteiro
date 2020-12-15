@@ -376,22 +376,22 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 			false,
 		},
 		{
-			"Simple routing",
+			"Asset start where finish",
 			model.Problem{
 				Fleet: []model.Asset{
 					{
-						AssetID:  "Pontedeume Asset",
-						Location: pontedeumeLoc,
+						AssetID:  "Sada Asset",
+						Location: sadaLoc,
 						Capacity: 4,
 					},
 					{
-						AssetID:  "Pontedeume Asset",
-						Location: pontedeumeLoc,
+						AssetID:  "Sada Asset",
+						Location: sadaLoc,
 						Capacity: 4,
 					},
 					{
-						AssetID:  "Pontedeume Asset",
-						Location: pontedeumeLoc,
+						AssetID:  "Sada Asset",
+						Location: sadaLoc,
 						Capacity: 4,
 					},
 				},
@@ -426,9 +426,44 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 				},
 			},
 			[]Route{
-				[]point.Point{pontedeumeLoc, pontevedraLoc, sadaLoc},
-				[]point.Point{pontedeumeLoc, vilalbaLoc, sadaLoc},
-				[]point.Point{pontedeumeLoc, aspontesLoc, minoLoc, sadaLoc},
+				[]point.Point{sadaLoc, aspontesLoc, minoLoc, sadaLoc},
+				[]point.Point{sadaLoc, pontevedraLoc, sadaLoc},
+				[]point.Point{sadaLoc, vilalbaLoc, sadaLoc},
+			},
+			[]model.Request{},
+			false,
+			false,
+		},
+		{
+			"Similar points reverse order",
+			model.Problem{
+				Fleet: []model.Asset{
+					{
+						AssetID:  "Pontedeume Asset",
+						Location: pontedeumeLoc,
+						Capacity: 4,
+					},
+				},
+				Requests: []model.Request{
+					{
+						RequestID: "As Pontes - Sada",
+						PickUp:    aspontesLoc, // As Pontes
+						DropOff:   sadaLoc,     // Sada
+						Load:      1,
+					},
+					{
+						RequestID: "Miño - As Pontes",
+						PickUp:    minoLoc,     // Miño
+						DropOff:   aspontesLoc, // As Pontes
+						Load:      1,
+					},
+				},
+				Constraints: model.Constraints{
+					MaxJourneyTimeFactor: 1.5,
+				},
+			},
+			[]Route{
+				[]point.Point{pontedeumeLoc, minoLoc, aspontesLoc, sadaLoc},
 			},
 			[]model.Request{},
 			false,
@@ -650,7 +685,7 @@ func manyRequests(t *testing.T, oneOrigin point.Point) []model.Request {
 		{4.68548, -74.07004},
 	} {
 		many = append(many, model.Request{
-			RequestID: model.RequestID(fmt.Sprintf("Rider %d", i)),
+			RequestID: model.Ref(fmt.Sprintf("Rider %d", i)),
 			PickUp:    oneOrigin,
 			DropOff:   p,
 			Load:      1,
@@ -659,100 +694,160 @@ func manyRequests(t *testing.T, oneOrigin point.Point) []model.Request {
 	return many
 }
 
-func Test_buildWaypoints(t *testing.T) {
-	t.Run("Build Waypoints", func(t *testing.T) {
-		asset := model.Asset{
-			AssetID:  "Pontedeume Asset",
-			Location: pontedeumeLoc,
-			Capacity: 4,
-		}
-		reqs := []model.Request{
-			{
-				RequestID: "As Pontes - Sada",
-				PickUp:    aspontesLoc, // As Pontes
-				DropOff:   sadaLoc,     // Sada
-				Load:      1,
-			},
-			{
-				RequestID: "As Pontes - Miño",
-				PickUp:    aspontesLoc, // As Pontes
-				DropOff:   minoLoc,     // Miño
-				Load:      1,
-			},
-		}
-
-		points := []point.Point{pontedeumeLoc, aspontesLoc, minoLoc, sadaLoc}
-
-		waypoints := []model.Waypoint{
-			{
+func Test_buildRouteWaypoints(t *testing.T) {
+	tests := []struct {
+		name      string
+		asset     model.Asset
+		route     model.Route
+		waypoints []model.Waypoint
+	}{
+		{
+			"Multiple points same location",
+			model.Asset{
+				AssetID:  "Pontedeume Asset",
 				Location: pontedeumeLoc,
-				Load:     0,
-				Activities: []model.Activity{
-					model.NewActivity(model.ActivityTypeStart, "Pontedeume Asset"),
+				Capacity: 4,
+			},
+			model.Route{
+				&model.Stop{
+					Ref:      "Pontedeume Asset",
+					Point:    pontedeumeLoc,
+					Load:     0,
+					Activity: model.ActivityTypeStart,
+				},
+				&model.Stop{
+					Ref:      "As Pontes - Sada",
+					Point:    aspontesLoc,
+					Load:     1,
+					Activity: model.ActivityTypePickUp,
+				},
+				&model.Stop{
+					Ref:      "As Pontes - Miño",
+					Point:    aspontesLoc,
+					Load:     1,
+					Activity: model.ActivityTypePickUp,
+				},
+				&model.Stop{
+					Ref:      "As Pontes - Miño",
+					Point:    minoLoc,
+					Load:     -1,
+					Activity: model.ActivityTypeDropOff,
+				},
+				&model.Stop{
+					Ref:      "As Pontes - Sada",
+					Point:    sadaLoc,
+					Load:     -1,
+					Activity: model.ActivityTypeDropOff,
 				},
 			},
-			{
-				Location: aspontesLoc,
-				Load:     2,
-				Activities: []model.Activity{
-					model.NewActivity(model.ActivityTypePickUp, "As Pontes - Sada"),
-					model.NewActivity(model.ActivityTypePickUp, "As Pontes - Miño"),
+			[]model.Waypoint{
+				{
+					Location: pontedeumeLoc,
+					Load:     0,
+					Activities: []model.Activity{
+						model.NewActivity(model.ActivityTypeStart, "Pontedeume Asset"),
+					},
+				},
+				{
+					Location: aspontesLoc,
+					Load:     2,
+					Activities: []model.Activity{
+						model.NewActivity(model.ActivityTypePickUp, "As Pontes - Sada"),
+						model.NewActivity(model.ActivityTypePickUp, "As Pontes - Miño"),
+					},
+				},
+				{
+					Location: minoLoc,
+					Load:     1,
+					Activities: []model.Activity{
+						model.NewActivity(model.ActivityTypeDropOff, "As Pontes - Miño"),
+					},
+				},
+				{
+					Location: sadaLoc,
+					Load:     0,
+					Activities: []model.Activity{
+						model.NewActivity(model.ActivityTypeDropOff, "As Pontes - Sada"),
+					},
 				},
 			},
-			{
-				Location: minoLoc,
-				Load:     1,
-				Activities: []model.Activity{
-					model.NewActivity(model.ActivityTypeDropOff, "As Pontes - Miño"),
-				},
-			},
-			{
-				Location: sadaLoc,
-				Load:     0,
-				Activities: []model.Activity{
-					model.NewActivity(model.ActivityTypeDropOff, "As Pontes - Sada"),
-				},
-			},
-		}
-		got := buildWaypoints(points, reqs, asset)
-		assert.Equal(t, waypoints, got)
-	})
-
-	t.Run("Build Waypoints same pickup and dropoff", func(t *testing.T) {
-		asset := model.Asset{
-			AssetID:  "Asset",
-			Location: pontedeumeLoc,
-			Capacity: 4,
-		}
-		reqs := []model.Request{
-			{
-				RequestID: "1",
-				PickUp:    pontedeumeLoc,
-				DropOff:   pontedeumeLoc,
-			},
-			{
-				RequestID: "2",
-				PickUp:    pontedeumeLoc,
-				DropOff:   pontedeumeLoc,
-			},
-		}
-
-		points := []point.Point{pontedeumeLoc}
-
-		waypoints := []model.Waypoint{
-			{
+		},
+		{
+			"Loop",
+			model.Asset{
+				AssetID:  "Pontedeume Asset",
 				Location: pontedeumeLoc,
-				Load:     0,
-				Activities: []model.Activity{
-					model.NewActivity(model.ActivityTypeStart, "Asset"),
-					model.NewActivity(model.ActivityTypePickUp, "1"),
-					model.NewActivity(model.ActivityTypeDropOff, "1"),
-					model.NewActivity(model.ActivityTypePickUp, "2"),
-					model.NewActivity(model.ActivityTypeDropOff, "2"),
+				Capacity: 4,
+			},
+			model.Route{
+				&model.Stop{
+					Ref:      "Pontedeume Asset",
+					Point:    pontedeumeLoc,
+					Load:     0,
+					Activity: model.ActivityTypeStart,
+				},
+				&model.Stop{
+					Ref:      "As Pontes - Pontedeume",
+					Point:    aspontesLoc,
+					Load:     1,
+					Activity: model.ActivityTypePickUp,
+				},
+				&model.Stop{
+					Ref:      "As Pontes - Miño",
+					Point:    aspontesLoc,
+					Load:     1,
+					Activity: model.ActivityTypePickUp,
+				},
+				&model.Stop{
+					Ref:      "As Pontes - Pontedeume",
+					Point:    pontedeumeLoc,
+					Load:     -1,
+					Activity: model.ActivityTypeDropOff,
+				},
+				&model.Stop{
+					Ref:      "As Pontes - Miño",
+					Point:    minoLoc,
+					Load:     -1,
+					Activity: model.ActivityTypeDropOff,
 				},
 			},
-		}
-		got := buildWaypoints(points, reqs, asset)
-		assert.Equal(t, waypoints, got)
-	})
+			[]model.Waypoint{
+				{
+					Location: pontedeumeLoc,
+					Load:     0,
+					Activities: []model.Activity{
+						model.NewActivity(model.ActivityTypeStart, "Pontedeume Asset"),
+					},
+				},
+				{
+					Location: aspontesLoc,
+					Load:     2,
+					Activities: []model.Activity{
+						model.NewActivity(model.ActivityTypePickUp, "As Pontes - Pontedeume"),
+						model.NewActivity(model.ActivityTypePickUp, "As Pontes - Miño"),
+					},
+				},
+				{
+					Location: pontedeumeLoc,
+					Load:     1,
+					Activities: []model.Activity{
+						model.NewActivity(model.ActivityTypeDropOff, "As Pontes - Pontedeume"),
+					},
+				},
+				{
+					Location: minoLoc,
+					Load:     0,
+					Activities: []model.Activity{
+						model.NewActivity(model.ActivityTypeDropOff, "As Pontes - Miño"),
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := buildRouteWaypoints(tt.route, tt.asset)
+			assert.Equal(t, tt.waypoints, got)
+		})
+	}
 }

@@ -64,12 +64,12 @@ func TestService_Render(t *testing.T) {
 					},
 					Requests: []model.Request{
 						{
-							RequestID: model.RequestID(req1.RequestID),
+							RequestID: model.Ref(req1.RequestID),
 							PickUp:    req1.PickUp,
 							DropOff:   req1.DropOff,
 						},
 						{
-							RequestID: model.RequestID(req2.RequestID),
+							RequestID: model.Ref(req2.RequestID),
 							PickUp:    req2.PickUp,
 							DropOff:   req2.DropOff,
 						},
@@ -127,12 +127,12 @@ func TestService_Render(t *testing.T) {
 					},
 					Requests: []model.Request{
 						{
-							RequestID: model.RequestID(req3.RequestID),
+							RequestID: model.Ref(req3.RequestID),
 							PickUp:    req1.PickUp,
 							DropOff:   req1.DropOff,
 						},
 						{
-							RequestID: model.RequestID(req4.RequestID),
+							RequestID: model.Ref(req4.RequestID),
 							PickUp:    req2.PickUp,
 							DropOff:   req2.DropOff,
 						},

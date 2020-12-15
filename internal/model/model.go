@@ -84,7 +84,7 @@ type SolutionMetrics struct {
 type Requests []*Request
 
 type Request struct {
-	RequestID          RequestID
+	RequestID          Ref
 	Load               Load
 	PickUp             point.Point
 	DropOff            point.Point
@@ -109,27 +109,26 @@ func (r Route) GetPoints() []point.Point {
 }
 
 type Stop struct {
-	Name        string
-	RequestID   *RequestID
-	Point       point.Point
-	ServiceTime time.Duration
-	Load        Load
+	Ref            Ref
+	Point          point.Point
+	MaxServiceTime time.Duration
+	ServiceTime    time.Duration
+	Load           Load
+	Activity       ActivityType
 }
 
-type RequestID string
-
-func (s Stop) IsDepot() bool {
-	return s.RequestID == nil
+func (s Stop) IsAssetDeparture() bool {
+	return s.Activity == ActivityTypeStart
 }
 
-func (s Stop) GetServiceTime() time.Duration {
-	return s.ServiceTime
+func (s Stop) GetMaxServiceTime() time.Duration {
+	return s.MaxServiceTime
 }
 
 func (s Stop) String() string {
 	t := "Depot"
-	if !s.IsDepot() {
+	if !s.IsAssetDeparture() {
 		t = "Request"
 	}
-	return fmt.Sprintf(`[%s '%s' (%s)]`, t, s.Name, s.Point)
+	return fmt.Sprintf(`[%s '%s' (%s)]`, t, s.Activity, s.Point)
 }

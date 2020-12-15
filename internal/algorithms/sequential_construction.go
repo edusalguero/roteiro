@@ -9,7 +9,6 @@ package algorithms
 
 import (
 	"context"
-	"fmt"
 	"math"
 	"sort"
 	"time"
@@ -61,10 +60,9 @@ func (a *SequentialConstruction) Solve(ctx context.Context, p model.Problem) (*m
 		var err error
 
 		r = append(r, &model.Stop{
-			Name:        "Asset",
-			RequestID:   nil,
-			Point:       assetLocation,
-			ServiceTime: 0,
+			Ref:      model.Ref(asset.AssetID),
+			Point:    assetLocation,
+			Activity: model.ActivityTypeStart,
 		})
 
 		for i := range unassignedRequests {
@@ -75,7 +73,7 @@ func (a *SequentialConstruction) Solve(ctx context.Context, p model.Problem) (*m
 			req := *ur
 			a.logger.Debugf("###  Adding request a new route: %s", req.RequestID)
 			r = a.addRequestStops(ctx, r, assetLocation, req, p.GetMaxJourneyTimeFactor())
-			r, err = a.hillClimbingRoutingAlgorithmV2(ctx, r, asset)
+			r, err = a.hillClimbingRoutingAlgorithmV3(ctx, r, asset)
 			if err != nil {
 				return nil, err
 			}
@@ -102,7 +100,7 @@ func (a *SequentialConstruction) Solve(ctx context.Context, p model.Problem) (*m
 		solutionRoutes = append(solutionRoutes, model.SolutionRoute{
 			Asset:     asset,
 			Requests:  routeReqs,
-			Waypoints: buildWaypoints(point.UniquePoints(r.GetPoints()), routeReqs, asset),
+			Waypoints: buildRouteWaypoints(r, asset),
 			Metrics:   model.RouteMetrics{Duration: re.TotalDuration, Distance: re.TotalDistance},
 		})
 
@@ -135,29 +133,34 @@ func (a *SequentialConstruction) Solve(ctx context.Context, p model.Problem) (*m
 	return &s, nil
 }
 
-func buildWaypoints(points []point.Point, reqs []model.Request, asset model.Asset) []model.Waypoint {
+func buildRouteWaypoints(r model.Route, asset model.Asset) []model.Waypoint {
 	var waypoints []model.Waypoint
-
 	var load model.Load = 0
-	for i, p := range points {
+	l := len(r)
+	for i := 0; i < l; {
+		stop := r[i]
+		p := stop.Point
 		var activities []model.Activity
-		if i == 0 {
-			activities = append(activities, model.NewActivity(model.ActivityTypeStart, model.Ref(asset.AssetID)))
+		if stop.Activity == model.ActivityTypeStart {
+			activities = append(activities, model.NewActivity(stop.Activity, model.Ref(asset.AssetID)))
 		}
-		for _, req := range reqs {
-			var activityType model.ActivityType
-			if req.PickUp == p {
-				activityType = model.ActivityTypePickUp
-				load += req.Load
-				activities = append(activities, model.NewActivity(activityType, model.Ref(req.RequestID)))
-			}
 
-			if req.DropOff == p {
-				activityType = model.ActivityTypeDropOff
-				load -= req.Load
-				activities = append(activities, model.NewActivity(activityType, model.Ref(req.RequestID)))
+		j := i
+		for {
+			if j == l {
+				break
 			}
+			s := r[j]
+			if s.Point != p {
+				break
+			}
+			if s.Activity != model.ActivityTypeStart {
+				load += s.Load
+				activities = append(activities, model.NewActivity(s.Activity, s.Ref))
+			}
+			j++
 		}
+		i = j
 
 		waypoints = append(waypoints, model.Waypoint{
 			Location:   p,
@@ -200,55 +203,42 @@ func assetsWithMoreCapacityFirst(assets []model.Asset) []model.Asset {
 func (a *SequentialConstruction) addRequestStops(ctx context.Context, r model.Route, assetLocation point.Point, req *model.Request, timeFactor float64) model.Route {
 	a.updateRequestServiceTime(ctx, assetLocation, req, timeFactor)
 	r = append(r, &model.Stop{
-		Name:        fmt.Sprintf("%s PickUp", req.RequestID),
-		RequestID:   &req.RequestID,
-		Point:       req.PickUp,
-		ServiceTime: req.PickUpServiceTime,
-		Load:        req.Load,
+		Ref:            req.RequestID,
+		Point:          req.PickUp,
+		MaxServiceTime: req.PickUpServiceTime,
+		Load:           req.Load,
+		Activity:       model.ActivityTypePickUp,
 	})
 
 	r = append(r, &model.Stop{
-		Name:        fmt.Sprintf("%s DropOff", req.RequestID),
-		RequestID:   &req.RequestID,
-		Point:       req.DropOff,
-		ServiceTime: req.DropOffServiceTime,
-		Load:        -req.Load,
+		Ref:            req.RequestID,
+		Point:          req.DropOff,
+		MaxServiceTime: req.DropOffServiceTime,
+		Load:           -req.Load,
+		Activity:       model.ActivityTypeDropOff,
 	})
 	return r
 }
 
 // Based on algorithm 1: The HC routing algorithm.
 // https://www.sciencedirect.com/science/article/pii/S131915781100036X#n0035
-func (a *SequentialConstruction) hillClimbingRoutingAlgorithmV2(ctx context.Context, r model.Route, asset model.Asset) (model.Route, error) {
+func (a *SequentialConstruction) hillClimbingRoutingAlgorithmV3(ctx context.Context, r model.Route, asset model.Asset) (model.Route, error) {
 	l := len(r)
-	cursor := l - 1
-
-	for {
-		current := r[cursor]
-		compareCursor := l - 1
-		if current.IsDepot() {
+	for i := range r {
+		i := l - 1 - i
+		current := r[i]
+		if current.IsAssetDeparture() {
 			break
 		}
-		for {
-			neighbor := r[compareCursor]
-			if neighbor.IsDepot() {
-				break
-			}
-
-			if compareCursor == cursor {
-				// Same point
-				compareCursor--
-				continue
-			}
-
-			a.logger.Debugf("Comparing ServiceTimes [%s] vs [%s]: (%v, %v)%v", current.Name, neighbor.Name, current.GetServiceTime(), neighbor.GetServiceTime(), current.GetServiceTime() < neighbor.GetServiceTime())
-			if current.GetServiceTime() > neighbor.GetServiceTime() {
+		for j := l - 1; j > 0; j-- {
+			neighbor := r[j]
+			if current.GetMaxServiceTime() > neighbor.GetMaxServiceTime() {
 				rPrima := r
 				costR, err := a.cost(ctx, r, asset)
 				if err != nil {
 					return nil, err
 				}
-				rPrima.Swap(cursor, compareCursor)
+				rPrima.Swap(i, j)
 				costRPrima, err := a.cost(ctx, rPrima, asset)
 				if err != nil {
 					return nil, err
@@ -258,9 +248,7 @@ func (a *SequentialConstruction) hillClimbingRoutingAlgorithmV2(ctx context.Cont
 					a.logger.Debugf("Updated r [Cost(%d) vs NewCost(%d)]", costR, costRPrima)
 				}
 			}
-			compareCursor--
 		}
-		cursor--
 	}
 	return r, nil
 }
@@ -290,13 +278,18 @@ func (a *SequentialConstruction) cost(ctx context.Context, r model.Route, asset 
 		return math.Inf(0), err
 	}
 
-	twv := countTimeWindowViolations(r, estimation)
+	// time window constraint violations
+	twv, err := a.countTimeWindowViolations(ctx, r)
+	if err != nil {
+		a.logger.Debugf("Error counting time window violations: %s", err)
+		return math.Inf(0), err
+	}
 	cv := countCapacityViolations(asset.Capacity, r)
 
 	vs := []float64{estimation.TotalDuration.Minutes(), float64(twv), float64(cv)}
-	d := W1 * normalize(estimation.TotalDuration.Minutes(), vs)
-	t := W2 * normalize(float64(twv), vs)
-	c := W3 * normalize(float64(cv), vs)
+	d := normalize(estimation.TotalDuration.Minutes(), vs)
+	t := normalize(float64(twv), vs)
+	c := normalize(float64(cv), vs)
 	return W1*d + W2*t + W3*c, nil
 }
 
@@ -347,7 +340,7 @@ func removeFromRoute(r model.Route, req model.Request) model.Route {
 	var route model.Route
 	route = append(route, r[0])
 	for _, stop := range r[1:] {
-		skip := *stop.RequestID == req.RequestID
+		skip := stop.Ref == req.RequestID
 		if !skip {
 			route = append(route, stop)
 		}
@@ -356,9 +349,31 @@ func removeFromRoute(r model.Route, req model.Request) model.Route {
 }
 
 func (a *SequentialConstruction) isFeasibleRoute(ctx context.Context, r model.Route, asset model.Asset) bool {
-	// time window constraint violations
+	// time window constraint capacityViolations
+	timeWindowViolations, err := a.countTimeWindowViolations(ctx, r)
+	if err != nil {
+		a.logger.Debugf("Error counting time window capacityViolations: %s", err)
+		return false
+	}
+
+	//  capacity constraint capacityViolations
+	orderViolations := countOrderViolations(r)
+	if asset.AssetID == "asset 4" {
+		a.logger.Debugf("Order capacityViolations", orderViolations)
+	}
+
+	//  capacity constraint capacityViolations
+	capacityViolations := countCapacityViolations(asset.Capacity, r)
+
+	feasible := capacityViolations == 0 && timeWindowViolations == 0 && orderViolations == 0
+	a.logger.Debugf("Is Feasible %b [CV: %d / TWV %d / OV: %d ]", feasible, capacityViolations, timeWindowViolations, orderViolations)
+	return feasible
+}
+
+func (a *SequentialConstruction) countTimeWindowViolations(ctx context.Context, r model.Route) (int, error) {
 	points := r.GetPoints()
-	for i := range points {
+	twv := 0
+	for i, stop := range r {
 		if i == 0 {
 			// no time from depot to depot
 			continue
@@ -366,18 +381,14 @@ func (a *SequentialConstruction) isFeasibleRoute(ctx context.Context, r model.Ro
 
 		e, err := a.routeEstimator.GetRouteEstimation(ctx, points[0:i+1])
 		if err != nil {
-			return false
+			return 0, err
 		}
-		ahead := r[i].GetServiceTime() - e.TotalDuration
-		if ahead < 0 {
-			return false
+		r[i].ServiceTime = e.TotalDuration // Set route service time
+		if e.TotalDuration > stop.GetMaxServiceTime() {
+			twv++
 		}
 	}
-	//  capacity constraint violations
-	violations := countCapacityViolations(asset.Capacity, r)
-
-	a.logger.Debugf("Is Feasible %b [Capacity violations: %d]", violations == 0, violations)
-	return violations == 0
+	return twv, nil
 }
 
 func (a *SequentialConstruction) updateRequestServiceTime(
@@ -393,6 +404,26 @@ func (a *SequentialConstruction) updateRequestServiceTime(
 	request.DropOffServiceTime = increaseDurationInAFactor(directRoute.TotalDuration, timeFactor)
 }
 
+func countOrderViolations(r model.Route) int {
+	violations := 0
+	for i, stop := range r {
+		if stop.Activity == model.ActivityTypeStart {
+			continue
+		}
+		for j := i; j < len(r); j++ {
+			if r[j].Ref != stop.Ref {
+				continue
+			}
+
+			if r[j].Activity == model.ActivityTypePickUp && stop.Activity == model.ActivityTypeDropOff {
+				violations++
+			}
+		}
+	}
+
+	return violations
+}
+
 func increaseDurationInAFactor(duration time.Duration, factor float64) time.Duration {
 	d := float64(duration.Nanoseconds()) * factor
 	return time.Duration(d)
@@ -401,7 +432,6 @@ func increaseDurationInAFactor(duration time.Duration, factor float64) time.Dura
 func countCapacityViolations(capacity model.Capacity, route model.Route) int {
 	violations := 0
 	load := 0
-	route.GetPoints()
 	for _, s := range route {
 		load += int(s.Load)
 		if load > int(capacity) {
@@ -410,21 +440,4 @@ func countCapacityViolations(capacity model.Capacity, route model.Route) int {
 	}
 
 	return violations
-}
-
-func countTimeWindowViolations(route model.Route, estimation *routeestimator.Estimation) int {
-	twv := 0
-	for _, stop := range route {
-		duration := time.Duration(0)
-		for _, leg := range estimation.Legs {
-			if leg.To == stop.Point {
-				duration += leg.Duration
-			}
-		}
-		if duration > stop.GetServiceTime() {
-			twv++
-		}
-	}
-
-	return twv
 }
