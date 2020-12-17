@@ -358,9 +358,6 @@ func (a *SequentialConstruction) isFeasibleRoute(ctx context.Context, r model.Ro
 
 	//  capacity constraint capacityViolations
 	orderViolations := countOrderViolations(r)
-	if asset.AssetID == "asset 4" {
-		a.logger.Debugf("Order capacityViolations", orderViolations)
-	}
 
 	//  capacity constraint capacityViolations
 	capacityViolations := countCapacityViolations(asset.Capacity, r)
