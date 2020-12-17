@@ -53,7 +53,7 @@ func (a *SequentialConstruction) Solve(ctx context.Context, p model.Problem) (*m
 
 	for _, asset := range assets {
 		assetLocation := asset.Location
-		unassignedRequests := a.sortRequestFromDepotToDropOffFarthestFirst(ctx, assetLocation, unassignedRequests)
+		unassignedRequests := a.sortRequestFromAssetLocationToDropOffFarthestFirst(ctx, assetLocation, unassignedRequests)
 		a.logger.Debugf("##  Creating a new route....")
 		var r model.Route
 		var routeReqs []model.Request
@@ -319,19 +319,24 @@ func biggest(values []float64) float64 {
 	return b
 }
 
-func (a *SequentialConstruction) sortRequestFromDepotToDropOffFarthestFirst(
+func (a *SequentialConstruction) sortRequestFromAssetLocationToDropOffFarthestFirst(
 	ctx context.Context,
-	depot point.Point,
+	assetLocation point.Point,
 	requests model.Requests,
 ) model.Requests {
 	sort.SliceStable(requests, func(i, j int) bool {
 		if requests[i] == nil || requests[j] == nil {
 			return false
 		}
-		distanceToI, _ := a.costEstimator.GetCost(ctx, depot, requests[i].DropOff)
-		distanceToJ, _ := a.costEstimator.GetCost(ctx, depot, requests[j].DropOff)
-
-		return distanceToI.Distance > distanceToJ.Distance
+		est2i, err := a.routeEstimator.GetRouteEstimation(ctx, []point.Point{assetLocation, requests[i].PickUp, requests[i].DropOff})
+		if err != nil {
+			return false
+		}
+		est2j, err := a.routeEstimator.GetRouteEstimation(ctx, []point.Point{assetLocation, requests[j].PickUp, requests[j].DropOff})
+		if err != nil {
+			return true
+		}
+		return est2i.TotalDistance > est2j.TotalDistance
 	})
 	return requests
 }

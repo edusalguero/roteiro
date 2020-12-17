@@ -426,9 +426,9 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 				},
 			},
 			[]Route{
-				[]point.Point{sadaLoc, aspontesLoc, minoLoc, sadaLoc},
 				[]point.Point{sadaLoc, pontevedraLoc, sadaLoc},
-				[]point.Point{sadaLoc, vilalbaLoc, sadaLoc},
+				[]point.Point{sadaLoc, aspontesLoc, vilalbaLoc, sadaLoc},
+				[]point.Point{sadaLoc, aspontesLoc, minoLoc},
 			},
 			[]model.Request{},
 			false,
