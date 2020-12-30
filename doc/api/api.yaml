@@ -74,6 +74,9 @@ components:
             num_requests:
               type: integer
               format: int32
+            num_unassigned:
+              type: integer
+              format: int32
             duration:
               type: integer
               format: int32
@@ -104,6 +107,9 @@ components:
               metrics:
                 type: object
                 properties:
+                  requests:
+                    type: integer
+                    format: int32
                   duration:
                     type: integer
                     format: int32

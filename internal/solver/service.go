@@ -25,10 +25,11 @@ type Service interface {
 type Solver struct {
 	distanceEstimator distanceestimator.Service
 	logger            logger.Logger
+	cnf               Config
 }
 
-func NewSolver(d distanceestimator.Service, log logger.Logger) *Solver {
-	return &Solver{distanceEstimator: d, logger: log}
+func NewSolver(log logger.Logger, d distanceestimator.Service, conf Config) *Solver {
+	return &Solver{distanceEstimator: d, logger: log, cnf: conf}
 }
 
 func (s *Solver) SolveProblem(ctx context.Context, p problem.Problem) (*problem.Solution, error) {

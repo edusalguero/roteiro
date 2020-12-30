@@ -1,7 +1,9 @@
 package config
 
 import (
+	"github.com/edusalguero/roteiro.git/internal/distanceestimator"
 	"github.com/edusalguero/roteiro.git/internal/logger"
+	"github.com/edusalguero/roteiro.git/internal/solver"
 	httpwrapper "github.com/edusalguero/roteiro.git/internal/utils/httpserver"
 	"github.com/edusalguero/roteiro.git/internal/utils/shutdown"
 	"github.com/kelseyhightower/envconfig"
@@ -10,17 +12,9 @@ import (
 type Config struct {
 	Log               logger.Config
 	Shutdown          shutdown.Config
-	DistanceEstimator DistanceEstimator
+	DistanceEstimator distanceestimator.Config
 	Server            httpwrapper.Config
-}
-
-type DistanceEstimator struct {
-	GoogleMaps GoogleMaps
-}
-
-type GoogleMaps struct {
-	Enabled bool   `default:"false"`
-	APIKey  string `required:"true"`
+	Solver            solver.Config
 }
 
 func Get() (Config, error) {

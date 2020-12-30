@@ -37,6 +37,10 @@ type Solution struct {
 	Unassigned []Request
 }
 
+func NewSolution(metrics SolutionMetrics, routes []SolutionRoute, unassigned []Request) *Solution {
+	return &Solution{Metrics: metrics, Routes: routes, Unassigned: unassigned}
+}
+
 type SolutionRoute struct {
 	Asset     Asset
 	Requests  []Request
@@ -79,6 +83,10 @@ type SolutionMetrics struct {
 	Duration      time.Duration
 	Distance      float64
 	SolvedTime    time.Duration
+}
+
+func NewSolutionMetrics(numAssets, numRequests, numUnassigned int, distance float64, duration, solvedTime time.Duration) SolutionMetrics {
+	return SolutionMetrics{NumAssets: numAssets, NumRequests: numRequests, NumUnassigned: numUnassigned, Duration: duration, Distance: distance, SolvedTime: solvedTime}
 }
 
 type Requests []*Request

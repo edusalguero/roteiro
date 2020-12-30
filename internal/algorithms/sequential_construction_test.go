@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/edusalguero/roteiro.git/internal/config"
 	"github.com/edusalguero/roteiro.git/internal/distanceestimator"
 	"github.com/edusalguero/roteiro.git/internal/logger"
 	"github.com/edusalguero/roteiro.git/internal/model"
@@ -25,15 +24,7 @@ var oneOrigin = point.NewPoint(4.68295, -74.04965)
 type Route []point.Point
 
 func TestSequentialConstruction_Solve(t *testing.T) {
-	cnf, err := config.Get()
-	if err != nil {
-		t.Errorf("Invalid config = %v", err)
-	}
-
-	log, err := logger.New(cnf.Log)
-	if err != nil {
-		t.Errorf("Invalid loger = %v", err)
-	}
+	log := logger.NewNopLogger()
 
 	e := distanceestimator.NewHaversineDistanceEstimator(80)
 	routeE := routeestimator.NewEstimator(e)
@@ -426,9 +417,9 @@ func TestSequentialConstruction_Solve(t *testing.T) {
 				},
 			},
 			[]Route{
-				[]point.Point{sadaLoc, aspontesLoc, minoLoc, sadaLoc},
 				[]point.Point{sadaLoc, pontevedraLoc, sadaLoc},
-				[]point.Point{sadaLoc, vilalbaLoc, sadaLoc},
+				[]point.Point{sadaLoc, aspontesLoc, vilalbaLoc, sadaLoc},
+				[]point.Point{sadaLoc, aspontesLoc, minoLoc},
 			},
 			[]model.Request{},
 			false,
