@@ -32,35 +32,39 @@ func NewSequentialConstruction(l logger.Logger, e routeestimator.Estimator, de c
 
 // Based on algorithm 2: The Sequential Construction
 // https://www.sciencedirect.com/science/article/pii/S131915781100036X#n0040
+// nolint funlen
 func (a *SequentialConstruction) Solve(ctx context.Context, p model.Problem) (*model.Solution, error) {
 	algoStart := time.Now()
 	usedAssets := 0
 	insertedRequests := 0
-
-	assets := p.Fleet
-	availableAssets := len(assets)
-	totalRequests := len(p.Requests)
+	totalRequestsCount := len(p.Requests)
 
 	var unassignedRequests model.Requests
+	var solutionRoutes []model.SolutionRoute
+	var totalDistance float64 = 0
+	var totalDuration time.Duration
+
 	for i := range p.Requests {
 		unassignedRequests = append(unassignedRequests, &p.Requests[i])
 	}
 
-	var solutionRoutes []model.SolutionRoute
-	var totalDistance float64 = 0
-	var totalDuration time.Duration
-	assets = assetsWithMoreCapacityFirst(assets)
+	availableAssets := assetsWithMoreCapacityFirst(p.Fleet)
+	availableAssetsCount := len(availableAssets)
 
-	for _, asset := range assets {
-		assetLocation := asset.Location
-		unassignedRequests := a.sortRequestFromAssetLocationToDropOffFarthestFirst(ctx, assetLocation, unassignedRequests)
-		a.logger.Debugf("##  Creating a new route....")
+	for {
+		if len(availableAssets) == 0 {
+			break
+		}
 		var r model.Route
 		var routeReqs []model.Request
 		var err error
 
-		r = append(r, &model.Stop{
-			Ref:      model.Ref(asset.AssetID),
+		asset := availableAssets[0]
+		assetLocation := asset.Location
+		unassignedRequests := a.sortRequestFromAssetLocationToDropOffFarthestFirst(ctx, assetLocation, unassignedRequests)
+		a.logger.Debugf("##  Creating a new route....")
+
+		r = append(r, &model.Stop{Ref: model.Ref(asset.AssetID),
 			Point:    assetLocation,
 			Activity: model.ActivityTypeStart,
 		})
@@ -94,6 +98,7 @@ func (a *SequentialConstruction) Solve(ctx context.Context, p model.Problem) (*m
 			}
 		}
 
+		availableAssets = remove(availableAssets, asset)
 		re, _ := a.routeEstimator.GetRouteEstimation(ctx, r.GetPoints())
 		totalDuration += re.TotalDuration
 		totalDistance += re.TotalDistance
@@ -105,32 +110,29 @@ func (a *SequentialConstruction) Solve(ctx context.Context, p model.Problem) (*m
 		})
 
 		usedAssets++
-		if insertedRequests == totalRequests {
-			break
-		}
-
-		if usedAssets == availableAssets {
+		if insertedRequests == totalRequestsCount || usedAssets == availableAssetsCount {
 			break
 		}
 	}
 
 	unassigned := getNotAssignedRequest(unassignedRequests)
 	algoDuration := time.Since(algoStart)
-	s := model.Solution{
-		Metrics: model.SolutionMetrics{
-			NumAssets:     usedAssets,
-			NumRequests:   insertedRequests,
-			NumUnassigned: len(unassigned),
-			Duration:      totalDuration,
-			Distance:      totalDistance,
-			SolvedTime:    algoDuration,
-		},
-		Routes:     solutionRoutes,
-		Unassigned: unassigned,
-	}
+	s := model.NewSolution(
+		model.NewSolutionMetrics(usedAssets, insertedRequests, len(unassigned), totalDistance, totalDuration, algoDuration),
+		solutionRoutes, unassigned)
+
 	a.logger.Debugf("Solution: %v", s)
 
-	return &s, nil
+	return s, nil
+}
+
+func remove(assets []model.Asset, asset model.Asset) []model.Asset {
+	for i, a := range assets {
+		if a == asset {
+			return append(assets[:i], assets[i+1:]...)
+		}
+	}
+	return assets
 }
 
 func buildRouteWaypoints(r model.Route, asset model.Asset) []model.Waypoint {
