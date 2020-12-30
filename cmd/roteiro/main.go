@@ -25,7 +25,7 @@ func main() {
 	e := distanceestimator.NewHaversineDistanceEstimator(80)
 	if cnf.DistanceEstimator.GoogleMaps.Enabled {
 		e, err = distanceestimator.NewGoogleMapsDistanceEstimator(
-			cnf.DistanceEstimator.GoogleMaps.APIKey,
+			cnf.DistanceEstimator.GoogleMaps,
 			log,
 		)
 		if err != nil {
@@ -33,7 +33,7 @@ func main() {
 		}
 	}
 
-	solverService := solver.NewSolver(e, log)
+	solverService := solver.NewSolver(log, e, cnf.Solver)
 	httpServerWrapper := httpwrapper.NewHTTPServerWrapper(cnf.Server)
 	httpServerWrapper.AddController(roteiro.NewStatusController())
 	httpServerWrapper.AddController(roteiro.NewSolverController(solverService, log, roteiro.IDGenerator))

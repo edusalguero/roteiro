@@ -212,7 +212,7 @@ func Test_service_SolveProblem(t *testing.T) {
 		},
 	}
 	e := distanceestimator.NewHaversineDistanceEstimator(80)
-	s := NewSolver(e, logger.NewLogger())
+	s := NewSolver(logger.NewLogger(), e, Config{})
 
 	t.Run("Solve problem", func(t *testing.T) {
 		got, err := s.SolveProblem(context.Background(), *p)
@@ -260,7 +260,7 @@ func Test_service_SolveProblem_WithErrorBuildingMatrix(t *testing.T) {
 			GetCost(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(nil, ErrBuildingDistanceMatrix).AnyTimes()
 
-		s := NewSolver(distanceEstimatorMock, logger.NewNopLogger())
+		s := NewSolver(logger.NewNopLogger(), distanceEstimatorMock, Config{})
 
 		got, err := s.SolveProblem(context.Background(), *p)
 		assert.Error(t, err, ErrBuildingDistanceMatrix)

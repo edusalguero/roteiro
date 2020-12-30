@@ -5,7 +5,6 @@ import (
 	"math"
 	"testing"
 
-	"github.com/edusalguero/roteiro.git/internal/config"
 	"github.com/edusalguero/roteiro.git/internal/cost"
 	"github.com/edusalguero/roteiro.git/internal/logger"
 	"github.com/edusalguero/roteiro.git/internal/point"
@@ -14,10 +13,6 @@ import (
 
 func TestGoogleMapsDistanceEstimator_GetCost(t *testing.T) {
 	t.Skip()
-	cnf, err := config.Get()
-	if err != nil {
-		t.Errorf("Invalid config = %v", err)
-	}
 	tests := []struct {
 		name string
 		from point.Point
@@ -44,7 +39,7 @@ func TestGoogleMapsDistanceEstimator_GetCost(t *testing.T) {
 		},
 	}
 
-	g, err := NewGoogleMapsDistanceEstimator(cnf.DistanceEstimator.GoogleMaps.APIKey, logger.NewNopLogger())
+	g, err := NewGoogleMapsDistanceEstimator(GoogleMapsConf{}, logger.NewNopLogger())
 	if err != nil {
 		t.Errorf("NewGoogleMapsDistanceEstimator() error = %v", err)
 	}

@@ -18,8 +18,8 @@ type GoogleMapsDistanceEstimator struct {
 	cacheWriteLock sync.Mutex
 }
 
-func NewGoogleMapsDistanceEstimator(apiKey string, l logger.Logger) (Service, error) {
-	c, err := maps.NewClient(maps.WithAPIKey(apiKey), maps.WithRateLimit(0))
+func NewGoogleMapsDistanceEstimator(config GoogleMapsConf, l logger.Logger) (Service, error) {
+	c, err := maps.NewClient(maps.WithAPIKey(config.APIKey), maps.WithRateLimit(0))
 	if err != nil {
 		return nil, err
 	}
