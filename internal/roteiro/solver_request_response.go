@@ -184,7 +184,7 @@ func newProblemFromRequest(req problemRequest, id uuid.UUID) problem.Problem {
 		})
 	}
 	return problem.Problem{
-		ID:       id,
+		ID:       problem.ID{UUID: id},
 		Fleet:    fleet,
 		Requests: reqs,
 		Constraints: problem.Constraints{

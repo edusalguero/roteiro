@@ -1,0 +1,66 @@
+{
+  "problem_id": "83437db4-3e3b-4167-bb7b-74178b6586fd",
+  "metrics": {
+    "num_assets": 1,
+    "num_requests": 1,
+    "num_unassigned": 0,
+    "duration": 0,
+    "distance": 0,
+    "solved_time": 161939
+  },
+  "routes": [
+    {
+      "asset": {
+        "asset_id": "asset ID",
+        "location": {
+          "lat": 52.52568,
+          "lon": 13.45345
+        },
+        "capacity": 1
+      },
+      "metrics": {
+        "requests": 1,
+        "duration": 0,
+        "distance": 0
+      },
+      "requests": [
+        {
+          "requester_id": "requester ID",
+          "pick_up": {
+            "lat": 52.52568,
+            "lon": 13.45345
+          },
+          "drop_off": {
+            "lat": 52.52568,
+            "lon": 13.45345
+          },
+          "load": 1
+        }
+      ],
+      "waypoints": [
+        {
+          "location": {
+            "lat": 52.52568,
+            "lon": 13.45345
+          },
+          "load": 0,
+          "activities": [
+            {
+              "activity_type": "Start",
+              "ref": "asset ID"
+            },
+            {
+              "activity_type": "PickUp",
+              "ref": "requester ID"
+            },
+            {
+              "activity_type": "DropOff",
+              "ref": "requester ID"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "unassigned": []
+}
