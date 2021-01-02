@@ -12,8 +12,11 @@ import (
 	"github.com/edusalguero/roteiro.git/internal/model"
 	"github.com/edusalguero/roteiro.git/internal/problem"
 	"github.com/edusalguero/roteiro.git/internal/routeestimator"
+	"github.com/edusalguero/roteiro.git/internal/store"
 )
 
+var ErrSavingProblem = fmt.Errorf("error saving problem")
+var ErrSavingSolution = fmt.Errorf("error saving solution")
 var ErrBuildingDistanceMatrix = fmt.Errorf("error building distance matrix")
 var ErrInAlgo = fmt.Errorf("error processing solve algorithm")
 
@@ -23,17 +26,24 @@ type Service interface {
 }
 
 type Solver struct {
-	distanceEstimator distanceestimator.Service
 	logger            logger.Logger
 	cnf               Config
+	distanceEstimator distanceestimator.Service
+	repository        store.Repository
 }
 
-func NewSolver(log logger.Logger, d distanceestimator.Service, conf Config) *Solver {
-	return &Solver{distanceEstimator: d, logger: log, cnf: conf}
+func NewSolver(log logger.Logger, conf Config, r store.Repository, d distanceestimator.Service) *Solver {
+	return &Solver{distanceEstimator: d, logger: log, repository: r, cnf: conf}
 }
 
 func (s *Solver) SolveProblem(ctx context.Context, p problem.Problem) (*problem.Solution, error) {
 	log := s.logger.WithField("problem_id", p.ID)
+
+	err := s.repository.AddProblem(ctx, &p)
+	if err != nil {
+		log.Errorf("Adding problem to the repository %s", err)
+		return nil, ErrSavingProblem
+	}
 
 	start := time.Now()
 	log.Infof("Building Cost Matrix...")
@@ -43,6 +53,9 @@ func (s *Solver) SolveProblem(ctx context.Context, p problem.Problem) (*problem.
 		Build(ctx)
 	if err != nil {
 		log.Errorf("Building Cost Matrix done %s", err)
+		if err := s.repository.SetError(ctx, p.ID, err); err != nil {
+			return nil, ErrBuildingDistanceMatrix
+		}
 		return nil, ErrBuildingDistanceMatrix
 	}
 	duration := time.Since(start)
@@ -57,15 +70,25 @@ func (s *Solver) SolveProblem(ctx context.Context, p problem.Problem) (*problem.
 	sol, err := algo.Solve(ctx, algoProblem)
 	duration = time.Since(start)
 	if err != nil {
+		if err := s.repository.SetError(ctx, p.ID, err); err != nil {
+			log.Errorf("Setting error: %s", err)
+			return nil, ErrInAlgo
+		}
 		log.Errorf("Solving algorithm", err)
 		return nil, ErrInAlgo
 	}
 
 	log.WithField("duration", duration).Infof("Problem solved [%s]", duration)
-	return &problem.Solution{
+	solution := &problem.Solution{
 		ID:       p.ID,
 		Solution: *sol,
-	}, nil
+	}
+	if err := s.repository.SetSolution(ctx, p.ID, solution); err != nil {
+		log.Errorf("setting error: %s", err)
+		return nil, ErrSavingSolution
+	}
+
+	return solution, nil
 }
 
 func NewAlgoProblemFromSolverProblem(p problem.Problem) model.Problem {

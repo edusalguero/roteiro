@@ -6,6 +6,7 @@ import (
 	"github.com/edusalguero/roteiro.git/internal/logger"
 	"github.com/edusalguero/roteiro.git/internal/roteiro"
 	"github.com/edusalguero/roteiro.git/internal/solver"
+	"github.com/edusalguero/roteiro.git/internal/store"
 	httpwrapper "github.com/edusalguero/roteiro.git/internal/utils/httpserver"
 	"github.com/edusalguero/roteiro.git/internal/utils/shutdown"
 )
@@ -22,7 +23,7 @@ func main() {
 		panic("could not initialize logger: " + err.Error())
 	}
 
-	e := distanceestimator.NewHaversineDistanceEstimator(80)
+	e := distanceestimator.NewHaversineDistanceEstimator(30)
 	if cnf.DistanceEstimator.GoogleMaps.Enabled {
 		e, err = distanceestimator.NewGoogleMapsDistanceEstimator(
 			cnf.DistanceEstimator.GoogleMaps,
@@ -33,10 +34,12 @@ func main() {
 		}
 	}
 
-	solverService := solver.NewSolver(log, e, cnf.Solver)
+	problemRepo := store.NewInMemoryRepository()
+	solverService := solver.NewSolver(log, cnf.Solver, problemRepo, e)
 	httpServerWrapper := httpwrapper.NewHTTPServerWrapper(cnf.Server)
 	httpServerWrapper.AddController(roteiro.NewStatusController())
-	httpServerWrapper.AddController(roteiro.NewSolverController(solverService, log, roteiro.IDGenerator))
+	httpServerWrapper.AddController(roteiro.NewSolverController(log, solverService, roteiro.IDGenerator))
+	httpServerWrapper.AddController(roteiro.NewProblemController(log, problemRepo))
 
 	log.Info("Starting Roteiro API Server")
 	shutdown.First().AfterStarting(httpServerWrapper)

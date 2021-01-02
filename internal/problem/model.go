@@ -8,8 +8,12 @@ import (
 	"github.com/google/uuid"
 )
 
+type ID struct {
+	uuid.UUID
+}
+
 type Problem struct {
-	ID          uuid.UUID
+	ID          ID
 	Fleet       []Asset
 	Requests    []Request
 	Constraints Constraints
@@ -41,10 +45,10 @@ type Constraints struct {
 }
 
 type Solution struct {
-	ID uuid.UUID
+	ID ID
 	model.Solution
 }
 
-func NewProblem(id uuid.UUID, fleet []Asset, requests []Request, constraints Constraints) *Problem {
+func NewProblem(id ID, fleet []Asset, requests []Request, constraints Constraints) *Problem {
 	return &Problem{ID: id, Fleet: fleet, Requests: requests, Constraints: constraints}
 }

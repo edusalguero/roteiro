@@ -26,25 +26,25 @@ func NewService() *StaticMap {
 
 func (s StaticMap) Render(solution *problem.Solution) (image.Image, error) {
 	mapCtx := maps.NewContext()
-	mapCtx.SetSize(800, 800)
+	mapCtx.SetSize(2000, 2000)
 	for _, r := range solution.Routes {
-		mapCtx.AddMarker(createMarker(r.Asset.Location, string(r.Asset.AssetID), randomColor(), 4))
+		mapCtx.AddMarker(createMarker(r.Asset.Location, string(r.Asset.AssetID), randomColor(), 16))
 		for _, req := range r.Requests {
 			c := randomColor()
-			mapCtx.AddMarker(createMarker(req.PickUp, string(req.RequestID), c, 5))
-			mapCtx.AddMarker(createMarker(req.DropOff, string(req.RequestID), c, 5))
+			mapCtx.AddMarker(createMarker(req.PickUp, string(req.RequestID), c, 16))
+			mapCtx.AddMarker(createMarker(req.DropOff, string(req.RequestID), c, 16))
 		}
 		var positions []s2.LatLng
 		for _, w := range r.Waypoints {
 			positions = append(positions, s2PointFromPoint(w.Location))
 		}
-		mapCtx.AddPath(maps.NewPath(positions, randomColor(), 3))
+		mapCtx.AddPath(maps.NewPath(positions, randomColor(), 2))
 	}
 
 	for _, req := range solution.Unassigned {
 		c := randomColor()
-		mapCtx.AddMarker(createMarker(req.PickUp, string(req.RequestID), c, 6))
-		mapCtx.AddMarker(createMarker(req.DropOff, string(req.RequestID), c, 6))
+		mapCtx.AddMarker(createMarker(req.PickUp, string(req.RequestID), c, 10))
+		mapCtx.AddMarker(createMarker(req.DropOff, string(req.RequestID), c, 10))
 	}
 
 	img, err := mapCtx.Render()

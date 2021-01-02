@@ -46,7 +46,7 @@ func TestService_Render(t *testing.T) {
 		DropOff:   sadaLoc,
 	}
 	solution := problem.Solution{
-		ID: uuid.New(),
+		ID: problem.ID{UUID: uuid.New()},
 		Solution: model.Solution{
 			Metrics: model.SolutionMetrics{
 				NumAssets:   2,

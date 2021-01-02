@@ -1,18 +1,15 @@
 openapi: 3.0.0
-
 info:
   version: v1
   title: Roteiro API
-
 servers:
   - url: 'http://localhost:8080/api/v1/'
-
 paths:
   '/problem':
     post:
       summary: "Solve a problem with the given description"
       operationId: problemPost
-      description: "Send a problem to be solved"
+      description: "The endpoint can solve the vehicle routing problem stated in the request body synchronously."
       tags:
         - Solver
       requestBody:
@@ -29,6 +26,69 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SolutionResponse"
+        400:
+          description: "Error"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  '/problem-long':
+    post:
+      summary: "Queue a long running problem with the given description"
+      operationId: problemPostAsync
+      description: "It will trigger a long-running background task. The GET solution endpoint could be used to ping to fetch the results.
+                    This is necessary for larger requests that take longer than 20 seconds.
+                    When you POST to the above URL, it will return immediately with a 202 HTTP code and the problem_id"
+      tags:
+        - Solver
+      requestBody:
+        description: The problem
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProblemRequest"
+      responses:
+        202:
+          description: "Problem queued"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemId"
+        400:
+          description: "Error"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  '/solution/{problem_id}':
+    get:
+      summary: "Get the solution for the given problem_id"
+      operationId: solutionGet
+      description: "It allows to recover the solution of a previously solved problem or a previously queued problem.
+                    When the problem has not yet been resolved, the status code is 102 (Processing). Upon completion, the status code is 200.
+                    The response that you would normally get directly from the synchronous endpoint is now in the output."
+      tags:
+        - Solver
+      parameters:
+        - name: problem_id
+          in: path
+          description: ID of related problem
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: "Success"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SolutionResponse"
+        409:
+          description: "Processing. The problem is not solved yet"
+        404:
+          description: "Not found"
         400:
           description: "Error"
           content:
@@ -65,6 +125,7 @@ components:
       properties:
         problem_id:
           type: string
+          format: uuid
         metrics:
           type: object
           properties:
@@ -169,8 +230,9 @@ components:
                 type: string
               ref:
                 type: string
-
-
-
-
-
+    ProblemId:
+      type: object
+      properties:
+        problem_id:
+          type: string
+          format: uuid

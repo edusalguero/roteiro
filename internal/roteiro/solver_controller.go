@@ -14,7 +14,6 @@ import (
 type SolverController struct {
 	solver          solver.Service
 	logger          logger.Logger
-	problems        map[string]*problem.Solution
 	idGeneratorFunc IDGeneratorFunc
 }
 
@@ -24,11 +23,10 @@ func IDGenerator() uuid.UUID {
 	return uuid.New()
 }
 
-func NewSolverController(solverService solver.Service, log logger.Logger, generatorFunc IDGeneratorFunc) *SolverController {
+func NewSolverController(log logger.Logger, solverService solver.Service, generatorFunc IDGeneratorFunc) *SolverController {
 	return &SolverController{
 		solver:          solverService,
 		logger:          log,
-		problems:        make(map[string]*problem.Solution),
 		idGeneratorFunc: generatorFunc,
 	}
 }
@@ -36,6 +34,7 @@ func NewSolverController(solverService solver.Service, log logger.Logger, genera
 func (c *SolverController) AddRoutes(g *gin.Engine) {
 	v1 := g.Group("/api/v1/")
 	v1.POST("problem", c.solveProblem)
+	v1.POST("problem-long", c.solveProblemAsync)
 }
 
 func (c *SolverController) solveProblem(ctx *gin.Context) {
@@ -60,6 +59,24 @@ func (c *SolverController) solveProblem(ctx *gin.Context) {
 	res := newSolutionResponseFromSol(sol)
 	c.logger.Infof("Problem solved[%s]... [%v]", id, res)
 
-	c.problems[sol.ID.String()] = sol
 	ctx.JSON(http.StatusOK, res)
+}
+
+func (c *SolverController) solveProblemAsync(ctx *gin.Context) {
+	var problemRequest problemRequest
+
+	if err := ctx.ShouldBindJSON(&problemRequest); err != nil {
+		c.logger.Errorf("Error processing request body: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Bad request!"})
+		return
+	}
+	id := c.idGeneratorFunc()
+	c.logger.Infof("Solving problem [%s]... [%v]", id, problemRequest)
+	p := newProblemFromRequest(problemRequest, id)
+	go func(p problem.Problem) {
+		_, _ = c.solver.SolveProblem(
+			context.Background(),
+			p)
+	}(p)
+	ctx.JSON(http.StatusAccepted, gin.H{"problem_id": id})
 }
