@@ -10,6 +10,7 @@ import (
 	"github.com/edusalguero/roteiro.git/internal/model"
 	"github.com/edusalguero/roteiro.git/internal/point"
 	"github.com/edusalguero/roteiro.git/internal/problem"
+	"github.com/edusalguero/roteiro.git/internal/store"
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -56,7 +57,7 @@ func Test_service_SolveProblem(t *testing.T) {
 	}
 
 	p := problem.NewProblem(
-		uuid.New(),
+		problem.ID{UUID: uuid.New()},
 		[]problem.Asset{
 			minoAsset,
 			aspontesAsset,
@@ -212,7 +213,7 @@ func Test_service_SolveProblem(t *testing.T) {
 		},
 	}
 	e := distanceestimator.NewHaversineDistanceEstimator(80)
-	s := NewSolver(logger.NewLogger(), e, Config{})
+	s := NewSolver(logger.NewLogger(), Config{}, store.NewInMemoryRepository(), e)
 
 	t.Run("Solve problem", func(t *testing.T) {
 		got, err := s.SolveProblem(context.Background(), *p)
@@ -239,7 +240,7 @@ func Test_service_SolveProblem_WithErrorBuildingMatrix(t *testing.T) {
 	}
 
 	p := problem.NewProblem(
-		uuid.New(),
+		problem.ID{UUID: uuid.New()},
 		[]problem.Asset{
 			aspontesAsset,
 		},
@@ -260,7 +261,7 @@ func Test_service_SolveProblem_WithErrorBuildingMatrix(t *testing.T) {
 			GetCost(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(nil, ErrBuildingDistanceMatrix).AnyTimes()
 
-		s := NewSolver(logger.NewNopLogger(), distanceEstimatorMock, Config{})
+		s := NewSolver(logger.NewNopLogger(), Config{}, store.NewInMemoryRepository(), distanceEstimatorMock)
 
 		got, err := s.SolveProblem(context.Background(), *p)
 		assert.Error(t, err, ErrBuildingDistanceMatrix)
